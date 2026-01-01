@@ -7,14 +7,160 @@
 [![License](https://img.shields.io/badge/license-MIT-orange.svg)](https://github.com/Atakan-Emre/McpTestGenerator/blob/main/LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-compatible-purple.svg)](https://modelcontextprotocol.io/)
 [![Tests](https://img.shields.io/badge/tests-26%20passed-brightgreen.svg)](https://github.com/Atakan-Emre/McpTestGenerator/actions)
+[![Docker](https://img.shields.io/docker/pulls/atakanemree/qa-mcp.svg)](https://hub.docker.com/r/atakanemree/qa-mcp)
 
-**LLM istemcilerinin bağlanıp standart test case üretme, kalite kontrol, Xray formatına çevirme ve test set kompozisyonu yapabildiği bir MCP sunucusu.**
-
-[Kurulum](#-kurulum) • [Kullanım](#-kullanım) • [Tools](#-tools) • [Resources](#-resources) • [Docker](#-docker) • [Güvenlik](#-güvenlik) • [Detaylı Kılavuz](USAGE.md)
+**🇬🇧 English** | [🇹🇷 Türkçe](#-türkçe)
 
 </div>
 
 ---
+
+# 🇬🇧 English
+
+**An MCP server that enables LLM clients to perform standardized test case generation, quality control, Xray format conversion, and test suite composition.**
+
+## 🎯 Problem
+
+Common issues in enterprise QA:
+
+- **Inconsistent test case formats**: Different people write in different formats → not reusable
+- **No standard in Xray/Jira**: Missing fields, unclear datasets, ambiguous steps
+- **Smoke/Regression distinction** depends on individuals: Sprint-based planning is difficult
+- **When writing tests with LLM**, same suggestions return or critical negative scenarios are missed
+
+## ✨ Solution
+
+QA-MCP provides:
+
+- ✅ **Single test standard**: Everyone produces/improves with the same template
+- ✅ **Quality gate**: Lint score + missing field detection
+- ✅ **Xray compatible output**: Importable JSON
+- ✅ **Test suite/plan composition**: Smoke/Regression/E2E suggestions + tagging
+- ✅ **Secure container deployment**: Runnable from Docker Hub
+
+## 📦 Installation
+
+### With pip
+
+```bash
+pip install qa-mcp
+```
+
+### From source
+
+```bash
+git clone https://github.com/Atakan-Emre/McpTestGenerator.git
+cd McpTestGenerator
+pip install -e .
+```
+
+### With Docker
+
+```bash
+docker pull atakanemree/qa-mcp:latest
+docker run -i atakanemree/qa-mcp:latest
+```
+
+## 🚀 Usage
+
+### MCP Client Connection
+
+#### Cursor / Claude Desktop
+
+Add to your `mcp.json` or `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "qa-mcp": {
+      "command": "qa-mcp",
+      "args": []
+    }
+  }
+}
+```
+
+#### With Docker
+
+```json
+{
+  "mcpServers": {
+    "qa-mcp": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "atakanemree/qa-mcp:1.0.0"]
+    }
+  }
+}
+```
+
+## 🔧 Tools
+
+| Tool | Description |
+|------|-------------|
+| `testcase.generate` | Generate standardized test cases from feature & acceptance criteria |
+| `testcase.lint` | Analyze test case quality, return score and improvement suggestions |
+| `testcase.normalize` | Convert Gherkin/Markdown → Standard format |
+| `testcase.to_xray` | Export to Xray/Jira import format |
+| `suite.compose` | Create Smoke/Regression/E2E test suites |
+| `suite.coverage_report` | Generate test coverage analysis |
+
+## 📚 Resources
+
+| URI | Description |
+|-----|-------------|
+| `qa://standards/testcase/v1` | Test case standard |
+| `qa://checklists/lint-rules/v1` | Lint rules |
+| `qa://mappings/xray/v1` | Xray field mapping |
+| `qa://examples/good/*` | Good test case examples |
+| `qa://examples/bad/*` | Bad test case examples |
+
+## 💬 Prompts
+
+| Prompt | Description |
+|--------|-------------|
+| `create-manual-test` | Create Xray Manual Test |
+| `select-smoke-tests` | Smoke test selection |
+| `generate-negative-scenarios` | Generate negative scenarios |
+| `review-test-coverage` | Test coverage analysis |
+
+## 🐳 Docker
+
+```bash
+# Pull image
+docker pull atakanemree/qa-mcp:latest
+
+# Run (stdio mode - default, most secure)
+docker run -i --rm atakanemree/qa-mcp:1.0.0
+
+# With environment variables
+docker run -i --rm \
+  -e LOG_LEVEL=debug \
+  -e ENABLE_WRITE_TOOLS=false \
+  atakanemree/qa-mcp:1.0.0
+```
+
+## 🔒 Security
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ENABLE_WRITE_TOOLS` | `false` | Enables Jira/Xray write tools |
+| `LOG_LEVEL` | `info` | Log level (`debug`, `info`, `warning`, `error`) |
+| `AUDIT_LOG_ENABLED` | `true` | Enables audit logging |
+| `HTTP_ENABLED` | `false` | Enables HTTP transport |
+| `HTTP_PORT` | `8080` | HTTP port |
+
+## 🗺️ Roadmap
+
+- [x] **v1.0** - MVP: generate, lint, to_xray, compose
+- [ ] **v1.1** - Policy/guardrails, audit logs
+- [ ] **v1.2** - Jira/Xray sync (read-only)
+- [ ] **v2.0** - HTTP transport, OAuth
+
+---
+
+# 🇹🇷 Türkçe
+
+**LLM istemcilerinin bağlanıp standart test case üretme, kalite kontrol, Xray formatına çevirme ve test set kompozisyonu yapabildiği bir MCP sunucusu.**
 
 ## 🎯 Problem
 
@@ -35,8 +181,6 @@ QA-MCP şunları sağlar:
 - ✅ **Test set/plan kompozisyonu**: Smoke/Regression/E2E önerisi + etiketleme
 - ✅ **Güvenli container dağıtımı**: Docker Hub'dan çalıştırılabilir
 
----
-
 ## 📦 Kurulum
 
 ### pip ile
@@ -56,11 +200,9 @@ pip install -e .
 ### Docker ile
 
 ```bash
-docker pull atakanemre/qa-mcp:latest
-docker run -i atakanemre/qa-mcp:latest
+docker pull atakanemree/qa-mcp:latest
+docker run -i atakanemree/qa-mcp:latest
 ```
-
----
 
 ## 🚀 Kullanım
 
@@ -88,139 +230,24 @@ docker run -i atakanemre/qa-mcp:latest
   "mcpServers": {
     "qa-mcp": {
       "command": "docker",
-      "args": ["run", "-i", "--rm", "atakanemre/qa-mcp:1.0.0"]
+      "args": ["run", "-i", "--rm", "atakanemree/qa-mcp:1.0.0"]
     }
   }
 }
 ```
 
----
-
 ## 🔧 Tools
 
-### `testcase.generate`
-
-Feature açıklaması ve acceptance criteria'dan standart test case üretir.
-
-**Parametreler:**
-
-| Parametre | Tip | Zorunlu | Açıklama |
-|-----------|-----|---------|----------|
-| `feature` | string | ✅ | Feature açıklaması |
-| `acceptance_criteria` | string[] | ✅ | Kabul kriterleri listesi |
-| `module` | string | ❌ | Modül/bileşen adı |
-| `risk_level` | enum | ❌ | `low`, `medium`, `high`, `critical` |
-| `include_negative` | boolean | ❌ | Negatif senaryolar dahil mi (default: true) |
-
-**Örnek:**
-
-```json
-{
-  "feature": "Kullanıcı girişi",
-  "acceptance_criteria": [
-    "Geçerli email ve şifre ile giriş yapılabilmeli",
-    "3 başarısız denemeden sonra hesap kilitlenmeli"
-  ],
-  "module": "auth",
-  "risk_level": "high"
-}
-```
-
----
-
-### `testcase.lint`
-
-Mevcut test case'i analiz eder, eksikleri ve iyileştirme önerilerini döner.
-
-**Parametreler:**
-
-| Parametre | Tip | Zorunlu | Açıklama |
-|-----------|-----|---------|----------|
-| `testcase` | object | ✅ | Analiz edilecek test case |
-
-**Çıktı:**
-
-```json
-{
-  "score": 72,
-  "issues": [
-    {"severity": "error", "field": "preconditions", "message": "Ön koşullar tanımlanmamış"},
-    {"severity": "warning", "field": "test_data", "message": "Boundary değerler eksik"}
-  ],
-  "suggestions": ["Negatif senaryo ekleyin", "Expected result daha spesifik olmalı"]
-}
-```
-
----
-
-### `testcase.normalize`
-
-Farklı formatlardaki test case'leri standart formata çevirir.
-
-**Parametreler:**
-
-| Parametre | Tip | Zorunlu | Açıklama |
-|-----------|-----|---------|----------|
-| `input` | string/object | ✅ | Normalize edilecek test case |
-| `source_format` | enum | ❌ | `auto`, `markdown`, `gherkin`, `json` |
-
----
-
-### `testcase.to_xray`
-
-Standart test case'i Xray import formatına çevirir.
-
-**Parametreler:**
-
-| Parametre | Tip | Zorunlu | Açıklama |
-|-----------|-----|---------|----------|
-| `testcase` | object | ✅ | Dönüştürülecek test case |
-| `project_key` | string | ✅ | Jira proje anahtarı |
-| `test_type` | enum | ❌ | `Manual`, `Automated`, `Generic` |
-
-**Çıktı:**
-
-```json
-{
-  "xray_payload": { "..." },
-  "field_mapping_report": { "..." },
-  "warnings": []
-}
-```
-
----
-
-### `suite.compose`
-
-Test case listesinden Smoke/Regression/E2E suite önerisi oluşturur.
-
-**Parametreler:**
-
-| Parametre | Tip | Zorunlu | Açıklama |
-|-----------|-----|---------|----------|
-| `testcases` | object[] | ✅ | Test case listesi |
-| `target` | enum | ✅ | `smoke`, `regression`, `e2e`, `sanity` |
-| `sprint` | string | ❌ | Sprint adı/numarası |
-| `max_duration_minutes` | number | ❌ | Maksimum suite süresi |
-
----
-
-### `suite.coverage_report`
-
-Test suite için kapsama raporu oluşturur.
-
-**Parametreler:**
-
-| Parametre | Tip | Zorunlu | Açıklama |
-|-----------|-----|---------|----------|
-| `testcases` | object[] | ✅ | Test case listesi |
-| `requirements` | string[] | ❌ | Kapsanacak gereksinimler |
-
----
+| Tool | Açıklama |
+|------|----------|
+| `testcase.generate` | Feature ve acceptance criteria'dan standart test case üretir |
+| `testcase.lint` | Test case kalitesini analiz eder, skor ve öneriler döner |
+| `testcase.normalize` | Gherkin/Markdown → Standart format dönüşümü |
+| `testcase.to_xray` | Xray/Jira import formatına çevirir |
+| `suite.compose` | Smoke/Regression/E2E test suite oluşturur |
+| `suite.coverage_report` | Test kapsam analizi raporu üretir |
 
 ## 📚 Resources
-
-MCP Resources, LLM'in erişebileceği statik verilerdir:
 
 | URI | Açıklama |
 |-----|----------|
@@ -230,11 +257,7 @@ MCP Resources, LLM'in erişebileceği statik verilerdir:
 | `qa://examples/good/*` | İyi test case örnekleri |
 | `qa://examples/bad/*` | Kötü test case örnekleri |
 
----
-
 ## 💬 Prompts
-
-Önceden tanımlanmış prompt şablonları:
 
 | Prompt | Açıklama |
 |--------|----------|
@@ -243,87 +266,31 @@ MCP Resources, LLM'in erişebileceği statik verilerdir:
 | `generate-negative-scenarios` | Negatif senaryo üretimi |
 | `review-test-coverage` | Test kapsam analizi |
 
----
-
 ## 🐳 Docker
 
-### Image Çekme
-
 ```bash
-# Latest (demo için)
-docker pull atakanemre/qa-mcp:latest
+# Image çekme
+docker pull atakanemree/qa-mcp:latest
 
-# Spesifik versiyon (üretim için önerilen)
-docker pull atakanemre/qa-mcp:1.0.0
-
-# Multi-arch (otomatik seçim)
-docker pull atakanemre/qa-mcp:1.0.0  # linux/amd64 veya linux/arm64
-```
-
-### Çalıştırma
-
-```bash
-# Stdio mode (varsayılan, en güvenli)
-docker run -i --rm atakanemre/qa-mcp:1.0.0
+# Çalıştırma (stdio mode - varsayılan, en güvenli)
+docker run -i --rm atakanemree/qa-mcp:1.0.0
 
 # Environment variables ile
 docker run -i --rm \
   -e LOG_LEVEL=debug \
   -e ENABLE_WRITE_TOOLS=false \
-  atakanemre/qa-mcp:1.0.0
+  atakanemree/qa-mcp:1.0.0
 ```
-
-### Docker MCP Gateway ile
-
-```yaml
-# docker-compose.yml
-services:
-  qa-mcp:
-    image: atakanemre/qa-mcp:1.0.0
-    environment:
-      - ENABLE_WRITE_TOOLS=false
-```
-
----
 
 ## 🔒 Güvenlik
 
-### Transport
-
-- **Varsayılan: stdio** - En güvenli, lokal süreç iletişimi
-- **HTTP (opsiyonel)** - Origin doğrulaması, localhost bind, auth gerektirir
-
-### Environment Variables
-
-| Değişken | Default | Açıklama |
-|----------|---------|----------|
+| Değişken | Varsayılan | Açıklama |
+|----------|------------|----------|
 | `ENABLE_WRITE_TOOLS` | `false` | Jira/Xray yazma tool'larını etkinleştirir |
 | `LOG_LEVEL` | `info` | Log seviyesi (`debug`, `info`, `warning`, `error`) |
 | `AUDIT_LOG_ENABLED` | `true` | Audit log'u etkinleştirir |
 | `HTTP_ENABLED` | `false` | HTTP transport'u etkinleştirir |
-| `HTTP_BIND_HOST` | `127.0.0.1` | HTTP bind adresi |
 | `HTTP_PORT` | `8080` | HTTP port |
-
-### Güvenlik Kontrol Listesi
-
-- ✅ Tool allowlist yaklaşımı
-- ✅ Parametre doğrulama
-- ✅ Rate limiting
-- ✅ Audit logging
-- ✅ SBOM + provenance (Docker image)
-
----
-
-## 📊 Başarı Ölçütleri
-
-| Metrik | Hedef |
-|--------|-------|
-| Lint skoru ortalaması | ↑ Artmalı |
-| Eksik alan yüzdesi | ↓ Düşmeli |
-| Xray import sonrası düzeltme | ↓ Düşmeli |
-| Test case üretim süresi | ↓ Düşmeli |
-
----
 
 ## 🗺️ Yol Haritası
 
@@ -334,28 +301,21 @@ services:
 
 ---
 
-## 📄 Lisans
+## 📄 License / Lisans
 
-MIT License - Detaylar için [LICENSE](LICENSE) dosyasına bakın.
+MIT License - Copyright (c) 2024-2026 [Atakan Emre](https://github.com/Atakan-Emre)
 
-Copyright (c) 2024-2026 [Atakan Emre](https://github.com/Atakan-Emre)
+## 🤝 Contributing / Katkıda Bulunma
 
----
+1. Fork the repository / Fork yapın
+2. Create feature branch / Feature branch oluşturun (`git checkout -b feature/amazing-feature`)
+3. Commit your changes / Commit yapın (`git commit -m 'Add amazing feature'`)
+4. Push to branch / Push yapın (`git push origin feature/amazing-feature`)
+5. Open a Pull Request / Pull Request açın
 
-## 🤝 Katkıda Bulunma
-
-1. Fork yapın
-2. Feature branch oluşturun (`git checkout -b feature/amazing-feature`)
-3. Commit yapın (`git commit -m 'Add amazing feature'`)
-4. Push yapın (`git push origin feature/amazing-feature`)
-5. Pull Request açın
-
----
-
-## 👤 Geliştirici
+## 👤 Developer / Geliştirici
 
 **Atakan Emre**
-
 - GitHub: [@Atakan-Emre](https://github.com/Atakan-Emre)
 - Repository: [McpTestGenerator](https://github.com/Atakan-Emre/McpTestGenerator)
 
@@ -363,7 +323,9 @@ Copyright (c) 2024-2026 [Atakan Emre](https://github.com/Atakan-Emre)
 
 <div align="center">
 
-**QA-MCP** ile test kalitesini standardize edin! 🚀
+**Standardize test quality with QA-MCP!** 🚀
+
+**QA-MCP ile test kalitesini standardize edin!** 🚀
 
 [![GitHub Stars](https://img.shields.io/github/stars/Atakan-Emre/McpTestGenerator?style=social)](https://github.com/Atakan-Emre/McpTestGenerator/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/Atakan-Emre/McpTestGenerator?style=social)](https://github.com/Atakan-Emre/McpTestGenerator/network/members)

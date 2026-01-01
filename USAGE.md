@@ -1,16 +1,352 @@
-# QA-MCP Kullanım Kılavuzu
+# QA-MCP Usage Guide / Kullanım Kılavuzu
 
-Bu doküman, QA-MCP MCP Server'ının nasıl kurulacağını ve kullanılacağını detaylı olarak açıklar.
+<div align="center">
+
+**🇬🇧 English** | [🇹🇷 Türkçe](#-türkçe-kullanım-kılavuzu)
+
+</div>
+
+---
+
+# 🇬🇧 English Usage Guide
+
+## 📋 Table of Contents
+
+- [Quick Start](#-quick-start)
+- [Installation Options](#-installation-options)
+- [MCP Client Integration](#-mcp-client-integration)
+- [Tool Usage Examples](#-tool-usage-examples)
+- [Resource Access](#-resource-access)
+- [Prompt Templates](#-prompt-templates)
+- [Configuration](#️-configuration)
+- [Troubleshooting](#-troubleshooting)
+
+---
+
+## 🚀 Quick Start
+
+### 1. Installation
+
+```bash
+git clone https://github.com/Atakan-Emre/McpTestGenerator.git
+cd McpTestGenerator
+pip install -e .
+```
+
+### 2. Start MCP Server
+
+```bash
+qa-mcp
+```
+
+### 3. Connect to Cursor/Claude Desktop
+
+```json
+{
+  "mcpServers": {
+    "qa-mcp": {
+      "command": "qa-mcp",
+      "args": []
+    }
+  }
+}
+```
+
+---
+
+## 📦 Installation Options
+
+### Option 1: With pip (Recommended)
+
+```bash
+pip install qa-mcp
+```
+
+### Option 2: From Source
+
+```bash
+git clone https://github.com/Atakan-Emre/McpTestGenerator.git
+cd McpTestGenerator
+pip install -e .
+```
+
+### Option 3: With Docker
+
+```bash
+docker pull atakanemree/qa-mcp:1.0.0
+docker run -i --rm atakanemree/qa-mcp:1.0.0
+```
+
+### Development Environment
+
+```bash
+git clone https://github.com/Atakan-Emre/McpTestGenerator.git
+cd McpTestGenerator
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+pip install -e ".[dev]"
+pytest tests/ -v
+```
+
+---
+
+## 🔌 MCP Client Integration
+
+### Cursor IDE
+
+1. Open Cursor settings
+2. Edit `mcp.json` file:
+
+```json
+{
+  "mcpServers": {
+    "qa-mcp": {
+      "command": "/path/to/.venv/bin/qa-mcp",
+      "args": []
+    }
+  }
+}
+```
+
+### Claude Desktop
+
+Add to `~/.claude/claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "qa-mcp": {
+      "command": "qa-mcp",
+      "args": []
+    }
+  }
+}
+```
+
+### MCP with Docker
+
+```json
+{
+  "mcpServers": {
+    "qa-mcp": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "atakanemree/qa-mcp:1.0.0"]
+    }
+  }
+}
+```
+
+---
+
+## 🔧 Tool Usage Examples
+
+### 1. Test Case Generation (`testcase.generate`)
+
+**Purpose:** Generates standard test cases from feature and acceptance criteria.
+
+**Example Request:**
+
+```json
+{
+  "feature": "User Login",
+  "acceptance_criteria": [
+    "User can login with valid email and password",
+    "Account should be locked after 3 failed attempts",
+    "Forgot password link should work"
+  ],
+  "module": "auth",
+  "risk_level": "high",
+  "include_negative": true
+}
+```
+
+**Example Output:**
+
+```json
+{
+  "testcases": [
+    {
+      "id": "TC-A1B2C3D4",
+      "title": "User Login - Valid email and password login",
+      "description": "This test verifies that the 'User Login' feature works according to acceptance criteria...",
+      "risk_level": "high",
+      "priority": "P1",
+      "steps": [...]
+    }
+  ],
+  "coverage_summary": {
+    "positive_scenarios": 3,
+    "negative_scenarios": 7,
+    "boundary_tests": 2
+  },
+  "total_generated": 12
+}
+```
+
+### 2. Test Case Lint (`testcase.lint`)
+
+**Purpose:** Analyzes test case quality, returns score and improvement suggestions.
+
+**Example Request:**
+
+```json
+{
+  "testcase": {
+    "title": "Login test",
+    "description": "Login test",
+    "preconditions": [],
+    "steps": [
+      {"step_number": 1, "action": "Login", "expected_result": "OK"}
+    ],
+    "expected_result": "Works"
+  }
+}
+```
+
+**Example Output:**
+
+```json
+{
+  "score": 35,
+  "grade": "F",
+  "passed": false,
+  "issues": [
+    {
+      "severity": "error",
+      "field": "preconditions",
+      "message": "Preconditions not defined",
+      "suggestion": "List the initial states required for the test to run"
+    }
+  ],
+  "improvement_plan": [
+    {"priority": 1, "action": "Add preconditions", "impact": "high"}
+  ]
+}
+```
+
+### 3. Format Conversion (`testcase.normalize`)
+
+**Purpose:** Converts test cases from Gherkin, Markdown, or plain text to standard format.
+
+**Gherkin Example:**
+
+```json
+{
+  "input_data": "Feature: User Login\nScenario: Valid login\nGiven user is registered\nWhen user enters credentials\nThen user is logged in",
+  "source_format": "gherkin"
+}
+```
+
+### 4. Xray Conversion (`testcase.to_xray`)
+
+**Purpose:** Converts standard test case to Jira/Xray import format.
+
+**Example Request:**
+
+```json
+{
+  "testcase": {
+    "title": "Login Test",
+    "description": "Test login functionality",
+    "preconditions": ["User exists"],
+    "steps": [
+      {"step_number": 1, "action": "Navigate to login", "expected_result": "Form displayed"}
+    ],
+    "expected_result": "User logged in",
+    "priority": "P1"
+  },
+  "project_key": "MYPROJ",
+  "test_type": "Manual"
+}
+```
+
+### 5. Suite Composition (`suite.compose`)
+
+**Purpose:** Creates Smoke/Regression/E2E suite from test case list.
+
+```json
+{
+  "testcases": [...],
+  "target": "smoke",
+  "sprint": "Sprint 15",
+  "max_duration_minutes": 15
+}
+```
+
+---
+
+## 📚 Resource Access
+
+| URI | Description |
+|-----|-------------|
+| `qa://standards/testcase/v1` | Test case writing standard |
+| `qa://checklists/lint-rules/v1` | Lint rules and scoring |
+| `qa://mappings/xray/v1` | Xray field mappings |
+| `qa://examples/good` | Good test case examples |
+| `qa://examples/bad` | Bad test case examples (anti-patterns) |
+
+---
+
+## 💬 Prompt Templates
+
+| Prompt | Description | Arguments |
+|--------|-------------|-----------|
+| `create-manual-test` | Manual test creation guide | feature, acceptance_criteria |
+| `select-smoke-tests` | Smoke test selection guide | testcases, max_duration |
+| `generate-negative-scenarios` | Negative scenario generation | feature, positive_testcases |
+| `review-test-coverage` | Coverage analysis guide | testcases, requirements |
+
+---
+
+## ⚙️ Configuration
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LOG_LEVEL` | `info` | Log level: debug, info, warning, error |
+| `ENABLE_WRITE_TOOLS` | `false` | Enables Jira/Xray write tools |
+| `AUDIT_LOG_ENABLED` | `true` | Logs tool calls |
+| `HTTP_ENABLED` | `false` | Enables HTTP transport |
+| `HTTP_PORT` | `8080` | HTTP port number |
+
+---
+
+## 🔍 Troubleshooting
+
+### 1. "qa-mcp command not found"
+
+```bash
+pip show qa-mcp
+# or use full path
+python -m qa_mcp.server
+```
+
+### 2. "Connection refused" (in MCP client)
+
+- Make sure server is running
+- Check mcp.json paths
+- Restart Cursor/Claude Desktop
+
+### Debug Mode
+
+```bash
+LOG_LEVEL=debug qa-mcp
+```
+
+---
+
+# 🇹🇷 Türkçe Kullanım Kılavuzu
 
 ## 📋 İçindekiler
 
 - [Hızlı Başlangıç](#-hızlı-başlangıç)
 - [Kurulum Seçenekleri](#-kurulum-seçenekleri)
 - [MCP İstemci Entegrasyonu](#-mcp-i̇stemci-entegrasyonu)
-- [Tool Kullanım Örnekleri](#-tool-kullanım-örnekleri)
+- [Tool Kullanım Örnekleri](#-tool-kullanım-örnekleri-1)
 - [Resource Erişimi](#-resource-erişimi)
 - [Prompt Şablonları](#-prompt-şablonları)
-- [Yapılandırma](#️-yapılandırma)
+- [Yapılandırma](#️-yapılandırma-1)
 - [Sorun Giderme](#-sorun-giderme)
 
 ---
@@ -65,8 +401,8 @@ pip install -e .
 ### Seçenek 3: Docker ile
 
 ```bash
-docker pull atakanemre/qa-mcp:1.0.0
-docker run -i --rm atakanemre/qa-mcp:1.0.0
+docker pull atakanemree/qa-mcp:1.0.0
+docker run -i --rm atakanemree/qa-mcp:1.0.0
 ```
 
 ### Geliştirme Ortamı
@@ -122,7 +458,7 @@ pytest tests/ -v
   "mcpServers": {
     "qa-mcp": {
       "command": "docker",
-      "args": ["run", "-i", "--rm", "atakanemre/qa-mcp:1.0.0"]
+      "args": ["run", "-i", "--rm", "atakanemree/qa-mcp:1.0.0"]
     }
   }
 }
@@ -148,8 +484,7 @@ pytest tests/ -v
   ],
   "module": "auth",
   "risk_level": "high",
-  "include_negative": true,
-  "include_boundary": true
+  "include_negative": true
 }
 ```
 
@@ -161,7 +496,7 @@ pytest tests/ -v
     {
       "id": "TC-A1B2C3D4",
       "title": "Kullanıcı Girişi - Geçerli email ve şifre ile giriş",
-      "description": "Bu test, 'Kullanıcı Girişi' özelliğinin şu kabul kriterine göre çalıştığını doğrular...",
+      "description": "Bu test, 'Kullanıcı Girişi' özelliğinin kabul kriterine göre çalıştığını doğrular...",
       "risk_level": "high",
       "priority": "P1",
       "steps": [...]
@@ -209,12 +544,6 @@ pytest tests/ -v
       "field": "preconditions",
       "message": "Ön koşullar tanımlanmamış",
       "suggestion": "Test'in çalışması için gerekli başlangıç durumlarını listeleyin"
-    },
-    {
-      "severity": "warning",
-      "field": "expected_result",
-      "message": "Expected result belirsiz",
-      "suggestion": "Spesifik ve doğrulanabilir sonuç yazın"
     }
   ],
   "improvement_plan": [
@@ -259,34 +588,9 @@ pytest tests/ -v
 }
 ```
 
-**Örnek Çıktı:**
-
-```json
-{
-  "xray_payload": {
-    "testtype": "Manual",
-    "fields": {
-      "project": {"key": "MYPROJ"},
-      "summary": "Login Test",
-      "issuetype": {"name": "Test"},
-      "priority": {"name": "High"}
-    },
-    "steps": [
-      {"action": "Navigate to login", "result": "Form displayed"}
-    ]
-  },
-  "field_mapping_report": {
-    "mapped_fields": ["title", "description", "priority", "steps"],
-    "unmapped_fields": ["risk_level"]
-  }
-}
-```
-
 ### 5. Suite Kompozisyonu (`suite.compose`)
 
 **Amaç:** Test case listesinden Smoke/Regression/E2E suite oluşturur.
-
-**Örnek İstek:**
 
 ```json
 {
@@ -297,27 +601,9 @@ pytest tests/ -v
 }
 ```
 
-### 6. Kapsam Raporu (`suite.coverage_report`)
-
-**Amaç:** Test suite için kapsam analizi yapar.
-
-**Örnek İstek:**
-
-```json
-{
-  "testcases": [...],
-  "requirements": ["REQ-001", "REQ-002", "REQ-003"],
-  "modules": ["auth", "payment", "cart"]
-}
-```
-
 ---
 
 ## 📚 Resource Erişimi
-
-MCP Resources, LLM'lerin erişebileceği statik referans verileridir.
-
-### Mevcut Resources
 
 | URI | Açıklama |
 |-----|----------|
@@ -327,19 +613,9 @@ MCP Resources, LLM'lerin erişebileceği statik referans verileridir.
 | `qa://examples/good` | İyi test case örnekleri |
 | `qa://examples/bad` | Kötü test case örnekleri (anti-patterns) |
 
-### Resource Kullanımı
-
-LLM istemcisi resource'lara şu şekilde erişebilir:
-
-```
-"qa://standards/testcase/v1 resource'unu oku ve test case standardını öğren"
-```
-
 ---
 
 ## 💬 Prompt Şablonları
-
-### Mevcut Prompt'lar
 
 | Prompt | Açıklama | Argümanlar |
 |--------|----------|------------|
@@ -348,68 +624,37 @@ LLM istemcisi resource'lara şu şekilde erişebilir:
 | `generate-negative-scenarios` | Negatif senaryo üretimi | feature, positive_testcases |
 | `review-test-coverage` | Kapsam analizi rehberi | testcases, requirements |
 
-### Prompt Kullanımı
-
-```
-"create-manual-test prompt'unu kullan, feature: 'Ödeme sistemi'"
-```
-
 ---
 
 ## ⚙️ Yapılandırma
 
 ### Environment Variables
 
-| Değişken | Default | Açıklama |
-|----------|---------|----------|
+| Değişken | Varsayılan | Açıklama |
+|----------|------------|----------|
 | `LOG_LEVEL` | `info` | Log seviyesi: debug, info, warning, error |
 | `ENABLE_WRITE_TOOLS` | `false` | Jira/Xray yazma tool'larını etkinleştirir |
 | `AUDIT_LOG_ENABLED` | `true` | Tool çağrılarını loglar |
 | `HTTP_ENABLED` | `false` | HTTP transport'u etkinleştirir |
-| `HTTP_BIND_HOST` | `127.0.0.1` | HTTP bind adresi |
 | `HTTP_PORT` | `8080` | HTTP port numarası |
-
-### Örnek Yapılandırma
-
-```bash
-export LOG_LEVEL=debug
-export ENABLE_WRITE_TOOLS=false
-qa-mcp
-```
 
 ---
 
 ## 🔍 Sorun Giderme
 
-### Sık Karşılaşılan Sorunlar
-
-#### 1. "qa-mcp command not found"
+### 1. "qa-mcp command not found"
 
 ```bash
-# pip install yolunu kontrol edin
 pip show qa-mcp
-
 # veya tam yol kullanın
 python -m qa_mcp.server
 ```
 
-#### 2. "Connection refused" (MCP istemcisinde)
+### 2. "Connection refused" (MCP istemcisinde)
 
 - Server'ın çalıştığından emin olun
 - mcp.json yollarını kontrol edin
 - Cursor/Claude Desktop'ı yeniden başlatın
-
-#### 3. Lint skoru düşük çıkıyor
-
-- `qa://standards/testcase/v1` resource'unu inceleyin
-- `qa://examples/good` örneklerini referans alın
-- `improvement_plan` içindeki önerileri uygulayın
-
-#### 4. Xray import başarısız
-
-- `project_key`'in doğru olduğundan emin olun
-- `field_mapping_report` içindeki uyarıları kontrol edin
-- Custom field mapping gerekebilir
 
 ### Debug Modu
 
@@ -417,15 +662,12 @@ python -m qa_mcp.server
 LOG_LEVEL=debug qa-mcp
 ```
 
-### Destek
-
-- GitHub Issues: [https://github.com/Atakan-Emre/McpTestGenerator/issues](https://github.com/Atakan-Emre/McpTestGenerator/issues)
-- Dokümantasyon: [README.md](README.md)
-
 ---
 
-## 📄 Lisans
+## 📄 License / Lisans
 
-MIT License - Detaylar için [LICENSE](LICENSE) dosyasına bakın.
+MIT License - Copyright (c) 2024-2026 [Atakan Emre](https://github.com/Atakan-Emre)
 
-Copyright (c) 2024-2026 [Atakan Emre](https://github.com/Atakan-Emre)
+### Support / Destek
+
+- GitHub Issues: [https://github.com/Atakan-Emre/McpTestGenerator/issues](https://github.com/Atakan-Emre/McpTestGenerator/issues)
