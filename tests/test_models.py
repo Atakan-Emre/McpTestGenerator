@@ -73,13 +73,13 @@ class TestTestCaseModel:
     def test_testcase_auto_timestamps(self):
         """Test that timestamps are auto-generated."""
         tc = TestCase(
-            title="Test with timestamps",
-            description="Testing timestamp generation",
-            preconditions=["None"],
+            title="Test with timestamps generated automatically",
+            description="Testing that timestamp fields are generated automatically",
+            preconditions=["System is ready"],
             steps=[
-                TestStep(step_number=1, action="Action", expected_result="Result")
+                TestStep(step_number=1, action="Perform action here", expected_result="Result is observed")
             ],
-            expected_result="Done",
+            expected_result="Test completes with timestamps set",
         )
         assert tc.created_at is not None
         assert tc.updated_at is not None

@@ -5,7 +5,7 @@ Converts QA-MCP standard test cases to Xray import format.
 """
 
 from typing import Any
-from qa_mcp.core.models import TestCase, Priority, RiskLevel
+from qa_mcp.core.models import TestCase, Priority
 
 
 # Xray field mappings
@@ -113,7 +113,7 @@ def convert_to_xray(
             field_mapping_report["custom_fields_used"] = list(custom_fields.keys())
     
     # Track unmapped fields
-    all_tc_fields = set(tc.model_fields.keys())
+    all_tc_fields = set(TestCase.model_fields.keys())
     mapped_base_fields = {"title", "description", "priority", "labels", "tags", "module", "steps", "preconditions"}
     unmapped = all_tc_fields - mapped_base_fields - {"id", "created_at", "updated_at", "author"}
     

@@ -10,7 +10,7 @@ readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
 authors = [
-    { name = "QA-MCP Team" }
+    { name = "Atakan Emre", email = "contact@atakanemre.com" }
 ]
 keywords = [
     "mcp",
@@ -55,10 +55,10 @@ jira = [
 qa-mcp = "qa_mcp.server:main"
 
 [project.urls]
-Homepage = "https://github.com/qa-mcp/qa-mcp"
-Documentation = "https://github.com/qa-mcp/qa-mcp#readme"
-Repository = "https://github.com/qa-mcp/qa-mcp"
-Issues = "https://github.com/qa-mcp/qa-mcp/issues"
+Homepage = "https://github.com/Atakan-Emre/McpTestGenerator"
+Documentation = "https://github.com/Atakan-Emre/McpTestGenerator#readme"
+Repository = "https://github.com/Atakan-Emre/McpTestGenerator"
+Issues = "https://github.com/Atakan-Emre/McpTestGenerator/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/qa_mcp"]

@@ -2,38 +2,16 @@
 # Multi-arch Docker image (amd64/arm64)
 
 # =============================================================================
-# Build stage
-# =============================================================================
-FROM python:3.11-slim as builder
-
-WORKDIR /app
-
-# Install build dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
-
-# Create virtual environment
-RUN python -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
-
-# Copy requirements and install dependencies
-COPY pyproject.toml .
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir build && \
-    pip install --no-cache-dir .
-
-# =============================================================================
 # Production stage
 # =============================================================================
-FROM python:3.11-slim as production
+FROM python:3.11-slim AS production
 
 # Labels for container metadata
 LABEL org.opencontainers.image.title="QA-MCP"
 LABEL org.opencontainers.image.description="Test Standardization & Orchestration MCP Server"
 LABEL org.opencontainers.image.version="1.0.0"
-LABEL org.opencontainers.image.authors="QA-MCP Team"
-LABEL org.opencontainers.image.source="https://github.com/qa-mcp/qa-mcp"
+LABEL org.opencontainers.image.authors="Atakan Emre"
+LABEL org.opencontainers.image.source="https://github.com/Atakan-Emre/McpTestGenerator"
 LABEL org.opencontainers.image.licenses="MIT"
 
 # Create non-root user for security
@@ -42,13 +20,16 @@ RUN groupadd --gid 1000 qamcp && \
 
 WORKDIR /app
 
-# Copy virtual environment from builder
-COPY --from=builder /opt/venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
+# Install dependencies
+RUN pip install --no-cache-dir --upgrade pip
 
-# Copy application code
-COPY --chown=qamcp:qamcp src/qa_mcp /app/qa_mcp
-COPY --chown=qamcp:qamcp resources /app/resources
+# Copy project files
+COPY pyproject.toml README.md ./
+COPY src/ ./src/
+COPY resources/ ./resources/
+
+# Install the package
+RUN pip install --no-cache-dir .
 
 # Environment variables
 ENV PYTHONUNBUFFERED=1 \
@@ -76,7 +57,7 @@ ENTRYPOINT ["python", "-m", "qa_mcp.server"]
 # =============================================================================
 # Development stage (optional)
 # =============================================================================
-FROM production as development
+FROM production AS development
 
 USER root
 

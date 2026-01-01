@@ -11,7 +11,7 @@ on:
 
 env:
   REGISTRY: docker.io
-  IMAGE_NAME: qamcp/qa-mcp
+  IMAGE_NAME: atakanemre/qa-mcp
 
 jobs:
   # ==========================================================================

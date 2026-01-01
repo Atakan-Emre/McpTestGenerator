@@ -2,14 +2,15 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
-![Python](https://img.shields.io/badge/python-3.11+-green.svg)
-![License](https://img.shields.io/badge/license-MIT-orange.svg)
-![MCP](https://img.shields.io/badge/MCP-compatible-purple.svg)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/Atakan-Emre/McpTestGenerator/releases)
+[![Python](https://img.shields.io/badge/python-3.11+-green.svg)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/badge/license-MIT-orange.svg)](https://github.com/Atakan-Emre/McpTestGenerator/blob/main/LICENSE)
+[![MCP](https://img.shields.io/badge/MCP-compatible-purple.svg)](https://modelcontextprotocol.io/)
+[![Tests](https://img.shields.io/badge/tests-26%20passed-brightgreen.svg)](https://github.com/Atakan-Emre/McpTestGenerator/actions)
 
 **LLM istemcilerinin bağlanıp standart test case üretme, kalite kontrol, Xray formatına çevirme ve test set kompozisyonu yapabildiği bir MCP sunucusu.**
 
-[Kurulum](#kurulum) • [Kullanım](#kullanım) • [Tools](#tools) • [Resources](#resources) • [Docker](#docker) • [Güvenlik](#güvenlik)
+[Kurulum](#-kurulum) • [Kullanım](#-kullanım) • [Tools](#-tools) • [Resources](#-resources) • [Docker](#-docker) • [Güvenlik](#-güvenlik) • [Detaylı Kılavuz](USAGE.md)
 
 </div>
 
@@ -44,19 +45,19 @@ QA-MCP şunları sağlar:
 pip install qa-mcp
 ```
 
-### Docker ile
-
-```bash
-docker pull qamcp/qa-mcp:latest
-docker run -i qamcp/qa-mcp:latest
-```
-
 ### Kaynak koddan
 
 ```bash
-git clone https://github.com/qa-mcp/qa-mcp.git
-cd qa-mcp
+git clone https://github.com/Atakan-Emre/McpTestGenerator.git
+cd McpTestGenerator
 pip install -e .
+```
+
+### Docker ile
+
+```bash
+docker pull atakanemre/qa-mcp:latest
+docker run -i atakanemre/qa-mcp:latest
 ```
 
 ---
@@ -87,7 +88,7 @@ pip install -e .
   "mcpServers": {
     "qa-mcp": {
       "command": "docker",
-      "args": ["run", "-i", "--rm", "qamcp/qa-mcp:1.0.0"]
+      "args": ["run", "-i", "--rm", "atakanemre/qa-mcp:1.0.0"]
     }
   }
 }
@@ -102,6 +103,7 @@ pip install -e .
 Feature açıklaması ve acceptance criteria'dan standart test case üretir.
 
 **Parametreler:**
+
 | Parametre | Tip | Zorunlu | Açıklama |
 |-----------|-----|---------|----------|
 | `feature` | string | ✅ | Feature açıklaması |
@@ -111,6 +113,7 @@ Feature açıklaması ve acceptance criteria'dan standart test case üretir.
 | `include_negative` | boolean | ❌ | Negatif senaryolar dahil mi (default: true) |
 
 **Örnek:**
+
 ```json
 {
   "feature": "Kullanıcı girişi",
@@ -130,11 +133,13 @@ Feature açıklaması ve acceptance criteria'dan standart test case üretir.
 Mevcut test case'i analiz eder, eksikleri ve iyileştirme önerilerini döner.
 
 **Parametreler:**
+
 | Parametre | Tip | Zorunlu | Açıklama |
 |-----------|-----|---------|----------|
 | `testcase` | object | ✅ | Analiz edilecek test case |
 
 **Çıktı:**
+
 ```json
 {
   "score": 72,
@@ -153,6 +158,7 @@ Mevcut test case'i analiz eder, eksikleri ve iyileştirme önerilerini döner.
 Farklı formatlardaki test case'leri standart formata çevirir.
 
 **Parametreler:**
+
 | Parametre | Tip | Zorunlu | Açıklama |
 |-----------|-----|---------|----------|
 | `input` | string/object | ✅ | Normalize edilecek test case |
@@ -165,6 +171,7 @@ Farklı formatlardaki test case'leri standart formata çevirir.
 Standart test case'i Xray import formatına çevirir.
 
 **Parametreler:**
+
 | Parametre | Tip | Zorunlu | Açıklama |
 |-----------|-----|---------|----------|
 | `testcase` | object | ✅ | Dönüştürülecek test case |
@@ -172,10 +179,11 @@ Standart test case'i Xray import formatına çevirir.
 | `test_type` | enum | ❌ | `Manual`, `Automated`, `Generic` |
 
 **Çıktı:**
+
 ```json
 {
-  "xray_payload": { ... },
-  "field_mapping_report": { ... },
+  "xray_payload": { "..." },
+  "field_mapping_report": { "..." },
   "warnings": []
 }
 ```
@@ -187,6 +195,7 @@ Standart test case'i Xray import formatına çevirir.
 Test case listesinden Smoke/Regression/E2E suite önerisi oluşturur.
 
 **Parametreler:**
+
 | Parametre | Tip | Zorunlu | Açıklama |
 |-----------|-----|---------|----------|
 | `testcases` | object[] | ✅ | Test case listesi |
@@ -201,6 +210,7 @@ Test case listesinden Smoke/Regression/E2E suite önerisi oluşturur.
 Test suite için kapsama raporu oluşturur.
 
 **Parametreler:**
+
 | Parametre | Tip | Zorunlu | Açıklama |
 |-----------|-----|---------|----------|
 | `testcases` | object[] | ✅ | Test case listesi |
@@ -241,26 +251,26 @@ MCP Resources, LLM'in erişebileceği statik verilerdir:
 
 ```bash
 # Latest (demo için)
-docker pull qamcp/qa-mcp:latest
+docker pull atakanemre/qa-mcp:latest
 
 # Spesifik versiyon (üretim için önerilen)
-docker pull qamcp/qa-mcp:1.0.0
+docker pull atakanemre/qa-mcp:1.0.0
 
 # Multi-arch (otomatik seçim)
-docker pull qamcp/qa-mcp:1.0.0  # linux/amd64 veya linux/arm64
+docker pull atakanemre/qa-mcp:1.0.0  # linux/amd64 veya linux/arm64
 ```
 
 ### Çalıştırma
 
 ```bash
 # Stdio mode (varsayılan, en güvenli)
-docker run -i --rm qamcp/qa-mcp:1.0.0
+docker run -i --rm atakanemre/qa-mcp:1.0.0
 
 # Environment variables ile
 docker run -i --rm \
   -e LOG_LEVEL=debug \
   -e ENABLE_WRITE_TOOLS=false \
-  qamcp/qa-mcp:1.0.0
+  atakanemre/qa-mcp:1.0.0
 ```
 
 ### Docker MCP Gateway ile
@@ -269,7 +279,7 @@ docker run -i --rm \
 # docker-compose.yml
 services:
   qa-mcp:
-    image: qamcp/qa-mcp:1.0.0
+    image: atakanemre/qa-mcp:1.0.0
     environment:
       - ENABLE_WRITE_TOOLS=false
 ```
@@ -328,6 +338,8 @@ services:
 
 MIT License - Detaylar için [LICENSE](LICENSE) dosyasına bakın.
 
+Copyright (c) 2024-2026 [Atakan Emre](https://github.com/Atakan-Emre)
+
 ---
 
 ## 🤝 Katkıda Bulunma
@@ -340,8 +352,20 @@ MIT License - Detaylar için [LICENSE](LICENSE) dosyasına bakın.
 
 ---
 
+## 👤 Geliştirici
+
+**Atakan Emre**
+
+- GitHub: [@Atakan-Emre](https://github.com/Atakan-Emre)
+- Repository: [McpTestGenerator](https://github.com/Atakan-Emre/McpTestGenerator)
+
+---
+
 <div align="center">
 
 **QA-MCP** ile test kalitesini standardize edin! 🚀
+
+[![GitHub Stars](https://img.shields.io/github/stars/Atakan-Emre/McpTestGenerator?style=social)](https://github.com/Atakan-Emre/McpTestGenerator/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/Atakan-Emre/McpTestGenerator?style=social)](https://github.com/Atakan-Emre/McpTestGenerator/network/members)
 
 </div>

@@ -143,24 +143,39 @@ def _parse_gherkin(input_data: str) -> tuple[TestCase, list[str]]:
                 preconditions.append(line[3:].strip())
     
     if not title:
-        title = "Gherkin'den içe aktarılan test case"
+        title = "Gherkin'den içe aktarılan test case senaryosu"
         warnings.append("Scenario adı bulunamadı, varsayılan başlık kullanıldı")
+    
+    # Ensure title meets minimum length
+    if len(title) < 10:
+        title = f"Gherkin Senaryo: {title}"
     
     if not steps:
         warnings.append("Test adımları çıkarılamadı")
         steps = [TestStep(
             step_number=1,
-            action="[Gherkin'den çevrilecek]",
-            expected_result="[Gherkin'den çevrilecek]",
+            action="[Gherkin'den çevrilecek - adım tanımlanmalı]",
+            expected_result="[Gherkin'den çevrilecek - sonuç tanımlanmalı]",
         )]
+    
+    # Build description ensuring minimum length
+    if not description:
+        description = f"Gherkin senaryosundan dönüştürüldü: {title}"
+    if len(description) < 20:
+        description = f"Gherkin Feature: {description} - otomatik dönüştürülmüş senaryo"
+    
+    # Build expected result ensuring minimum length
+    expected = steps[-1].expected_result if steps else "[Beklenen sonuç belirtilmeli]"
+    if len(expected) < 10:
+        expected = f"Senaryo sonucu: {expected}"
     
     tc = TestCase(
         id=f"TC-{uuid.uuid4().hex[:8].upper()}",
         title=title,
-        description=description or f"Gherkin senaryosundan dönüştürüldü: {title}",
+        description=description,
         preconditions=preconditions if preconditions else ["[Ön koşullar belirtilmeli]"],
         steps=steps,
-        expected_result=steps[-1].expected_result if steps else "[Beklenen sonuç belirtilmeli]",
+        expected_result=expected,
         tags=["gherkin-import"],
     )
     
