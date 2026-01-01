@@ -1,0 +1,65 @@
+# QA-MCP Docker Compose Configuration
+# 
+# Usage:
+#   docker-compose up        # Start in stdio mode (default)
+#   docker-compose --profile dev up  # Start with development tools
+
+version: '3.8'
+
+services:
+  # Main QA-MCP service (stdio mode)
+  qa-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    image: qamcp/qa-mcp:${VERSION:-1.0.0}
+    container_name: qa-mcp
+    stdin_open: true
+    tty: true
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - ENABLE_WRITE_TOOLS=${ENABLE_WRITE_TOOLS:-false}
+      - AUDIT_LOG_ENABLED=${AUDIT_LOG_ENABLED:-true}
+    # Security: run as non-root
+    user: "1000:1000"
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    # No network needed for stdio mode
+    network_mode: none
+    # Read-only filesystem for security
+    read_only: true
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+
+  # Development service with additional tools
+  qa-mcp-dev:
+    profiles:
+      - dev
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    image: qamcp/qa-mcp:${VERSION:-1.0.0}-dev
+    container_name: qa-mcp-dev
+    stdin_open: true
+    tty: true
+    environment:
+      - LOG_LEVEL=debug
+      - ENABLE_WRITE_TOOLS=true
+      - AUDIT_LOG_ENABLED=true
+    volumes:
+      # Mount source for hot reload during development
+      - ./src/qa_mcp:/app/qa_mcp:ro
+      - ./resources:/app/resources:ro
+      - ./tests:/app/tests:ro
+    working_dir: /app
+    command: ["-c", "pytest tests/ -v"]

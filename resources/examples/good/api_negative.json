@@ -1,0 +1,89 @@
+{
+  "id": "GOOD-002",
+  "metadata": {
+    "name": "İyi Örnek - API Negatif Senaryo",
+    "why_good": [
+      "Negatif senaryo olarak açıkça işaretlenmiş",
+      "Güvenlik açısından kritik bir test",
+      "Test data is_negative flag'i ile işaretli",
+      "Expected result'lar doğrulanabilir (HTTP status code, header)",
+      "Güvenlik best practice'leri kontrol ediliyor",
+      "Error response formatı verify ediliyor"
+    ],
+    "lint_score": 92
+  },
+  "testcase": {
+    "id": "TC-API-SEC-001",
+    "title": "API Authentication - Invalid Token ile 401 Unauthorized Response",
+    "description": "Bu test, API endpoint'lerinin geçersiz authentication token ile çağrıldığında doğru şekilde 401 Unauthorized yanıtı döndürdüğünü ve hassas bilgi sızdırmadığını doğrular. Güvenlik perspektifinden kritik bir kontrol.",
+    "module": "api",
+    "feature": "api-security",
+    "scenario_type": "negative",
+    "risk_level": "high",
+    "priority": "P1",
+    "test_type": "Manual",
+    "preconditions": [
+      "API endpoint https://api.example.com/v1 erişilebilir",
+      "Geçersiz/expired test token hazırlanmış",
+      "Rate limiting geçici olarak disable (test için)"
+    ],
+    "steps": [
+      {
+        "step_number": 1,
+        "action": "GET /api/v1/users endpoint'ine geçersiz Authorization header ile istek gönder",
+        "expected_result": "HTTP 401 Unauthorized status code döner",
+        "test_data": [
+          {
+            "name": "invalid_token",
+            "value": "Bearer expired_token_12345",
+            "is_negative": true,
+            "description": "Expired/invalid JWT token"
+          }
+        ]
+      },
+      {
+        "step_number": 2,
+        "action": "Response body'yi kontrol et",
+        "expected_result": "Error response JSON formatında: {\"error\": \"Unauthorized\", \"message\": \"Invalid or expired token\"}"
+      },
+      {
+        "step_number": 3,
+        "action": "Response headers'ı kontrol et",
+        "expected_result": "WWW-Authenticate header mevcut, Content-Type: application/json"
+      },
+      {
+        "step_number": 4,
+        "action": "Response body'de hassas bilgi olmadığını doğrula",
+        "expected_result": "Stack trace, internal error details, database info gibi hassas bilgiler yok"
+      },
+      {
+        "step_number": 5,
+        "action": "Response time'ı ölç",
+        "expected_result": "Response time < 500ms (timing attack'a karşı consistent)"
+      }
+    ],
+    "test_data": [
+      {
+        "name": "endpoint",
+        "value": "/api/v1/users",
+        "description": "Test edilecek protected endpoint"
+      },
+      {
+        "name": "invalid_token",
+        "value": "Bearer expired_token_12345",
+        "is_negative": true,
+        "description": "Expired JWT token"
+      },
+      {
+        "name": "expected_status",
+        "value": 401,
+        "description": "Beklenen HTTP status code"
+      }
+    ],
+    "expected_result": "API, geçersiz token durumunda güvenli bir şekilde 401 yanıtı döner, hassas bilgi sızdırmaz ve consistent response time sağlar",
+    "tags": ["api", "security", "authentication", "negative-test"],
+    "labels": ["regression", "security"],
+    "estimated_duration_minutes": 2,
+    "requirements": ["REQ-SEC-001", "REQ-API-AUTH-003"]
+  }
+}

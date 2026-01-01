@@ -1,0 +1,182 @@
+{
+  "version": "1.0",
+  "name": "QA-MCP to Xray Field Mapping",
+  "description": "QA-MCP test case alanlarının Xray import formatına dönüşüm kuralları",
+  "xray_version": "Xray Cloud / Xray Server 5.x+",
+  "standard_mappings": {
+    "title": {
+      "qa_mcp_field": "title",
+      "xray_field": "summary",
+      "jira_api_path": "fields.summary",
+      "transformation": "direct",
+      "notes": "Direkt mapping, truncate if > 255 chars"
+    },
+    "description": {
+      "qa_mcp_field": "description",
+      "xray_field": "description",
+      "jira_api_path": "fields.description",
+      "transformation": "enriched",
+      "enrichment_includes": [
+        "Test bilgileri (scenario_type, risk_level)",
+        "Test data özeti",
+        "Gereksinim linkleri"
+      ],
+      "notes": "Zenginleştirilmiş içerik, Jira wiki markup formatında"
+    },
+    "priority": {
+      "qa_mcp_field": "priority",
+      "xray_field": "priority",
+      "jira_api_path": "fields.priority.name",
+      "transformation": "mapped",
+      "value_mapping": {
+        "P0": "Highest",
+        "P1": "High",
+        "P2": "Medium",
+        "P3": "Low"
+      }
+    },
+    "module": {
+      "qa_mcp_field": "module",
+      "xray_field": "components",
+      "jira_api_path": "fields.components[].name",
+      "transformation": "array_wrap",
+      "notes": "Single value to array, component must exist in Jira"
+    },
+    "tags_and_labels": {
+      "qa_mcp_fields": ["tags", "labels"],
+      "xray_field": "labels",
+      "jira_api_path": "fields.labels",
+      "transformation": "merge_arrays",
+      "notes": "Tags ve labels birleştirilir, lowercase normalized"
+    },
+    "steps": {
+      "qa_mcp_field": "steps",
+      "xray_field": "steps",
+      "jira_api_path": "N/A (Xray specific)",
+      "transformation": "structured",
+      "step_format": {
+        "action": "step.action",
+        "result": "step.expected_result",
+        "data": "step.test_data (formatted as key=value)"
+      }
+    },
+    "preconditions": {
+      "qa_mcp_field": "preconditions",
+      "xray_field": "preconditions",
+      "jira_api_path": "N/A (Xray specific)",
+      "transformation": "join_with_bullets",
+      "format": "• {precondition_1}\n• {precondition_2}"
+    }
+  },
+  "custom_field_recommendations": {
+    "risk_level": {
+      "qa_mcp_field": "risk_level",
+      "suggested_jira_type": "Select List (single choice)",
+      "suggested_name": "Risk Level",
+      "options": ["low", "medium", "high", "critical"],
+      "setup_notes": "Jira admin'de custom field oluşturun ve screen'lere ekleyin"
+    },
+    "scenario_type": {
+      "qa_mcp_field": "scenario_type",
+      "suggested_jira_type": "Select List (single choice)",
+      "suggested_name": "Scenario Type",
+      "options": ["positive", "negative", "boundary", "edge_case", "error_handling"]
+    },
+    "feature": {
+      "qa_mcp_field": "feature",
+      "suggested_jira_type": "Text Field (single line)",
+      "suggested_name": "Feature"
+    },
+    "estimated_duration_minutes": {
+      "qa_mcp_field": "estimated_duration_minutes",
+      "suggested_jira_type": "Number Field",
+      "suggested_name": "Estimated Duration (min)"
+    },
+    "requirements": {
+      "qa_mcp_field": "requirements",
+      "suggested_jira_type": "Issue Links",
+      "suggested_link_type": "Tests",
+      "alternative": "Text field with comma-separated IDs"
+    }
+  },
+  "test_types": {
+    "Manual": {
+      "xray_value": "Manual",
+      "description": "Manuel test - Xray'de manual test olarak oluşturulur",
+      "has_steps": true
+    },
+    "Automated": {
+      "xray_value": "Generic",
+      "description": "Otomatik test - Generic test olarak oluşturulur",
+      "has_steps": false,
+      "notes": "Test definition external'da (code repo)"
+    },
+    "Generic": {
+      "xray_value": "Generic",
+      "description": "Genel test - Framework bağımsız",
+      "has_steps": true
+    }
+  },
+  "import_formats": {
+    "json": {
+      "description": "Xray JSON import formatı",
+      "endpoint_cloud": "/rest/raven/1.0/import/test",
+      "endpoint_server": "/rest/raven/1.0/import/test",
+      "content_type": "application/json",
+      "batch_support": true,
+      "max_batch_size": 100,
+      "example_payload": {
+        "testtype": "Manual",
+        "fields": {
+          "project": {"key": "PROJ"},
+          "summary": "Test case title",
+          "description": "Test description",
+          "issuetype": {"name": "Test"},
+          "priority": {"name": "Medium"},
+          "labels": ["smoke", "regression"]
+        },
+        "steps": [
+          {
+            "action": "Step 1 action",
+            "result": "Step 1 expected result",
+            "data": "key1=value1, key2=value2"
+          }
+        ],
+        "preconditions": "• Precondition 1\n• Precondition 2"
+      }
+    },
+    "csv": {
+      "description": "CSV import (basit format)",
+      "notes": "Steps için sınırlı destek, basit test'ler için uygun",
+      "columns": [
+        "Summary",
+        "Description",
+        "Priority",
+        "Labels",
+        "Steps (pipe separated)"
+      ]
+    }
+  },
+  "xray_specific_fields": {
+    "test_repository_folder": {
+      "description": "Xray Test Repository'deki klasör",
+      "api_path": "testRepositoryPath",
+      "format": "/Folder1/Folder2"
+    },
+    "test_sets": {
+      "description": "Test Set issue'larına link",
+      "relationship": "is part of"
+    },
+    "test_plans": {
+      "description": "Test Plan issue'larına link",
+      "relationship": "is tested by"
+    }
+  },
+  "best_practices": [
+    "Custom field ID'leri Jira admin'den alın (customfield_XXXXX formatında)",
+    "Select tipi alanlar için önce Jira'da option'ları oluşturun",
+    "Component'ler Jira projesinde önceden tanımlı olmalı",
+    "Bulk import öncesi test environment'da deneyin",
+    "Import sonrası field mapping'i verify edin"
+  ]
+}

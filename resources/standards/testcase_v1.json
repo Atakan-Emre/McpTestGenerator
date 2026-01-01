@@ -1,0 +1,235 @@
+{
+  "version": "1.0",
+  "name": "QA-MCP Test Case Standard",
+  "description": "Kurumsal test case yazım standardı - tüm test case'ler bu yapıya uygun olmalıdır",
+  "schema": {
+    "required_fields": {
+      "title": {
+        "type": "string",
+        "min_length": 10,
+        "max_length": 200,
+        "description": "Test case başlığı - neyin test edildiğini açıkça belirtmeli",
+        "rules": [
+          "Minimum 10 karakter olmalı",
+          "Genel kelimelerle başlamamalı (Test, Check, Verify)",
+          "Test edilen özelliği ve senaryoyu belirtmeli"
+        ],
+        "examples": {
+          "good": [
+            "Kullanıcı Girişi - Geçerli credentials ile başarılı login",
+            "API Authentication - Invalid token ile 401 response",
+            "Sepet - Ürün miktarı güncelleme işlemi"
+          ],
+          "bad": [
+            "Login test",
+            "Test case 1",
+            "Check functionality"
+          ]
+        }
+      },
+      "description": {
+        "type": "string",
+        "min_length": 20,
+        "description": "Test'in amacını, kapsamını ve bağlamını açıklayan detaylı metin",
+        "rules": [
+          "Başlıktan farklı olmalı",
+          "Test'in neden yapıldığını açıklamalı",
+          "Scope ve limitasyonları belirtmeli"
+        ]
+      },
+      "preconditions": {
+        "type": "array",
+        "item_type": "string",
+        "min_items": 1,
+        "description": "Test çalıştırılmadan önce sağlanması gereken koşullar",
+        "rules": [
+          "En az bir ön koşul olmalı",
+          "Spesifik ve doğrulanabilir olmalı",
+          "Belirsiz terimlerden kaçınılmalı"
+        ],
+        "examples": {
+          "good": [
+            "Kullanıcı 'test@example.com' email adresi ile kayıtlı",
+            "API endpoint https://api.example.com/v1 erişilebilir",
+            "Database'de en az 10 test ürünü mevcut"
+          ],
+          "bad": [
+            "Sistem çalışıyor",
+            "Her şey hazır",
+            "Configured properly"
+          ]
+        }
+      },
+      "steps": {
+        "type": "array",
+        "item_type": "TestStep",
+        "min_items": 1,
+        "max_items": 15,
+        "description": "Test adımları - her adımda action ve expected_result olmalı"
+      },
+      "expected_result": {
+        "type": "string",
+        "min_length": 10,
+        "description": "Test'in genel beklenen sonucu - tüm adımların başarılı tamamlanması sonucu elde edilecek durum"
+      }
+    },
+    "optional_fields": {
+      "id": {
+        "type": "string",
+        "format": "TC-XXXXXXXX",
+        "description": "Unique test case identifier"
+      },
+      "module": {
+        "type": "string",
+        "description": "Test edilen modül/bileşen"
+      },
+      "feature": {
+        "type": "string",
+        "description": "Test edilen özellik"
+      },
+      "scenario_type": {
+        "type": "enum",
+        "values": ["positive", "negative", "boundary", "edge_case", "error_handling"],
+        "default": "positive"
+      },
+      "risk_level": {
+        "type": "enum",
+        "values": ["low", "medium", "high", "critical"],
+        "default": "medium"
+      },
+      "priority": {
+        "type": "enum",
+        "values": ["P0", "P1", "P2", "P3"],
+        "default": "P2",
+        "descriptions": {
+          "P0": "Critical - Her build'de çalışmalı",
+          "P1": "High - Her release'de çalışmalı",
+          "P2": "Medium - Regression'da çalışmalı",
+          "P3": "Low - Zaman zaman çalışmalı"
+        }
+      },
+      "test_type": {
+        "type": "enum",
+        "values": ["Manual", "Automated", "Generic"],
+        "default": "Manual"
+      },
+      "test_data": {
+        "type": "array",
+        "item_type": "TestData",
+        "description": "Test için gerekli veriler"
+      },
+      "tags": {
+        "type": "array",
+        "item_type": "string",
+        "description": "Kategorize etmek için etiketler"
+      },
+      "labels": {
+        "type": "array",
+        "item_type": "string",
+        "description": "Suite label'ları: smoke, regression, e2e, security"
+      },
+      "estimated_duration_minutes": {
+        "type": "integer",
+        "min": 1,
+        "max": 480,
+        "description": "Tahmini çalışma süresi (dakika)"
+      },
+      "requirements": {
+        "type": "array",
+        "item_type": "string",
+        "description": "Bağlı gereksinim ID'leri (traceability)"
+      },
+      "related_testcases": {
+        "type": "array",
+        "item_type": "string",
+        "description": "İlişkili test case ID'leri"
+      }
+    },
+    "nested_schemas": {
+      "TestStep": {
+        "step_number": {
+          "type": "integer",
+          "min": 1,
+          "description": "Adım sırası"
+        },
+        "action": {
+          "type": "string",
+          "min_length": 5,
+          "description": "Yapılacak işlem"
+        },
+        "expected_result": {
+          "type": "string",
+          "min_length": 5,
+          "description": "Beklenen sonuç"
+        },
+        "test_data": {
+          "type": "array",
+          "item_type": "TestData",
+          "optional": true
+        },
+        "notes": {
+          "type": "string",
+          "optional": true
+        }
+      },
+      "TestData": {
+        "name": {
+          "type": "string",
+          "description": "Veri değişken adı"
+        },
+        "value": {
+          "type": "any",
+          "description": "Veri değeri"
+        },
+        "description": {
+          "type": "string",
+          "optional": true
+        },
+        "is_boundary": {
+          "type": "boolean",
+          "default": false,
+          "description": "Sınır değer mi?"
+        },
+        "is_negative": {
+          "type": "boolean",
+          "default": false,
+          "description": "Negatif test verisi mi?"
+        }
+      }
+    }
+  },
+  "best_practices": [
+    {
+      "category": "Başlık",
+      "practices": [
+        "Neyin test edildiğini açıkça belirtin",
+        "Module veya feature prefix'i kullanın: [API], [UI], [Integration]",
+        "Senaryo tipini belirtin: pozitif, negatif, boundary"
+      ]
+    },
+    {
+      "category": "Adımlar",
+      "practices": [
+        "Her adım için doğrulanabilir expected result yazın",
+        "Adım sayısını 15 ile sınırlayın",
+        "Atomik adımlar tercih edin"
+      ]
+    },
+    {
+      "category": "Test Data",
+      "practices": [
+        "Hardcoded değerler yerine parametrik data kullanın",
+        "Boundary değerleri açıkça işaretleyin",
+        "Negatif test data'yı ayırın"
+      ]
+    },
+    {
+      "category": "Traceability",
+      "practices": [
+        "Her test case'i en az bir requirement'a bağlayın",
+        "İlişkili test case'leri belirtin",
+        "Suite label'ları ekleyin"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,101 @@
+{
+  "id": "GOOD-001",
+  "metadata": {
+    "name": "İyi Örnek - Login Pozitif Senaryo",
+    "why_good": [
+      "Başlık açık ve spesifik - ne test edildiği belli",
+      "Açıklama detaylı ve bağlam sağlıyor",
+      "Ön koşullar somut ve doğrulanabilir",
+      "Her adımın expected result'ı spesifik",
+      "Test data açıkça tanımlanmış",
+      "Risk ve priority uygun şekilde belirlenmiş",
+      "Traceability için requirement linkleri mevcut"
+    ],
+    "lint_score": 95
+  },
+  "testcase": {
+    "id": "TC-AUTH-001",
+    "title": "Kullanıcı Girişi - Geçerli email ve şifre ile başarılı authentication",
+    "description": "Bu test, kayıtlı bir kullanıcının geçerli email ve şifre bilgileriyle sisteme başarıyla giriş yapabildiğini doğrular. Test, authentication flow'unun tüm adımlarını kapsar: form validasyonu, credential doğrulama, session oluşturma ve redirect.",
+    "module": "auth",
+    "feature": "user-login",
+    "scenario_type": "positive",
+    "risk_level": "critical",
+    "priority": "P0",
+    "test_type": "Manual",
+    "preconditions": [
+      "Test kullanıcısı sisteme kayıtlı (email: test@example.com)",
+      "Kullanıcı hesabı aktif durumda (locked değil)",
+      "Login sayfası erişilebilir (HTTP 200)",
+      "Database bağlantısı aktif"
+    ],
+    "steps": [
+      {
+        "step_number": 1,
+        "action": "Login sayfasına git (URL: /login)",
+        "expected_result": "Login formu görüntülenir, email ve password alanları mevcut, 'Giriş Yap' butonu aktif"
+      },
+      {
+        "step_number": 2,
+        "action": "Email alanına 'test@example.com' gir",
+        "expected_result": "Email alanı değeri kabul eder, inline validation hatası görüntülenmez",
+        "test_data": [
+          {
+            "name": "email",
+            "value": "test@example.com",
+            "description": "Geçerli test kullanıcısı emaili"
+          }
+        ]
+      },
+      {
+        "step_number": 3,
+        "action": "Password alanına geçerli şifreyi gir",
+        "expected_result": "Şifre maskeli olarak görüntülenir (••••••), göster/gizle toggle çalışır",
+        "test_data": [
+          {
+            "name": "password",
+            "value": "ValidP@ss123",
+            "description": "Geçerli şifre - complexity requirements'ı karşılıyor"
+          }
+        ]
+      },
+      {
+        "step_number": 4,
+        "action": "'Giriş Yap' butonuna tıkla",
+        "expected_result": "Loading indicator görüntülenir, buton disabled olur, çift tıklama engellenir"
+      },
+      {
+        "step_number": 5,
+        "action": "Authentication sonucunu bekle (max 5 saniye)",
+        "expected_result": "Kullanıcı dashboard sayfasına (/dashboard) yönlendirilir"
+      },
+      {
+        "step_number": 6,
+        "action": "Dashboard sayfasını doğrula",
+        "expected_result": "Welcome mesajı kullanıcı adını içerir, navigation menu görünür, logout butonu mevcut"
+      }
+    ],
+    "test_data": [
+      {
+        "name": "email",
+        "value": "test@example.com",
+        "description": "Geçerli test kullanıcısı emaili"
+      },
+      {
+        "name": "password",
+        "value": "ValidP@ss123",
+        "description": "Geçerli şifre"
+      },
+      {
+        "name": "expected_redirect",
+        "value": "/dashboard",
+        "description": "Başarılı login sonrası redirect URL"
+      }
+    ],
+    "expected_result": "Kullanıcı başarıyla sisteme giriş yapar, JWT session token oluşturulur, dashboard sayfası görüntülenir ve kullanıcı bilgileri doğru şekilde gösterilir",
+    "tags": ["auth", "login", "critical-path", "core-functionality"],
+    "labels": ["smoke", "regression", "e2e"],
+    "estimated_duration_minutes": 3,
+    "requirements": ["REQ-AUTH-001", "REQ-AUTH-002", "REQ-SEC-001"]
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "id": "BAD-001",
+  "metadata": {
+    "name": "Kötü Örnek - Belirsiz Test Case",
+    "problems": [
+      "Başlık çok kısa ve belirsiz - 'Login test' neyi test ediyor?",
+      "Açıklama başlıkla aynı - ek bilgi yok",
+      "Ön koşullar tanımlı değil - test başlamadan önce ne gerekli?",
+      "Test adımı çok genel - 'Login yap' nasıl?",
+      "Expected result 'Çalışır' doğrulanabilir değil - ne çalışır?",
+      "Risk level ve priority belirtilmemiş",
+      "Test data yok - hangi credentials kullanılacak?",
+      "Traceability yok - hangi requirement test ediliyor?"
+    ],
+    "lint_score_estimate": 25,
+    "grade": "F",
+    "improvement_needed": "Major revizyon gerekli"
+  },
+  "testcase": {
+    "title": "Login test",
+    "description": "Login test",
+    "preconditions": [],
+    "steps": [
+      {
+        "step_number": 1,
+        "action": "Login yap",
+        "expected_result": "Çalışır"
+      }
+    ],
+    "expected_result": "OK",
+    "tags": []
+  },
+  "corrected_version": {
+    "note": "Bu test case şu şekilde düzeltilmeli:",
+    "title": "Kullanıcı Girişi - Geçerli credentials ile başarılı authentication",
+    "description": "Bu test, kayıtlı kullanıcının geçerli email ve şifre ile sisteme giriş yapabildiğini doğrular.",
+    "preconditions": [
+      "Test kullanıcısı kayıtlı (test@example.com)",
+      "Kullanıcı hesabı aktif",
+      "Login sayfası erişilebilir"
+    ],
+    "steps": [
+      {
+        "step_number": 1,
+        "action": "Login sayfasına git (/login)",
+        "expected_result": "Login formu görüntülenir"
+      },
+      {
+        "step_number": 2,
+        "action": "Email alanına 'test@example.com' gir",
+        "expected_result": "Email kabul edilir"
+      },
+      {
+        "step_number": 3,
+        "action": "Şifre alanına geçerli şifreyi gir",
+        "expected_result": "Şifre maskeli görüntülenir"
+      },
+      {
+        "step_number": 4,
+        "action": "Login butonuna tıkla",
+        "expected_result": "Dashboard sayfasına yönlendirilir"
+      }
+    ],
+    "expected_result": "Kullanıcı başarıyla giriş yapar ve dashboard görüntülenir",
+    "risk_level": "critical",
+    "priority": "P0"
+  }
+}
