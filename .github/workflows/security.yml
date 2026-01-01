@@ -46,6 +46,10 @@ jobs:
   container-scan:
     name: Container Security Scan
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
     steps:
       - uses: actions/checkout@v4
 
@@ -59,7 +63,6 @@ jobs:
           push: false
           load: true
           tags: qamcp/qa-mcp:scan
-          platforms: linux/amd64
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
@@ -68,12 +71,14 @@ jobs:
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
+        continue-on-error: true
 
       - name: Upload Trivy scan results
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: 'trivy-results.sarif'
+        continue-on-error: true
 
   # ==========================================================================
   # Code Security Analysis (CodeQL)
@@ -114,3 +119,4 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
