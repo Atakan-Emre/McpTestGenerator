@@ -13,7 +13,7 @@ def get_create_manual_test_prompt(
 ) -> dict[str, Any]:
     """
     Get the prompt template for creating manual test cases.
-    
+
     MCP Prompt Name: create-manual-test
     """
     base_prompt = """Sen bir QA uzmanısın. Verilen feature ve acceptance criteria'ya göre 
@@ -47,15 +47,15 @@ testcase.generate tool'unu kullanarak test case oluştur. Tool şu parametreleri
 - include_negative: true/false
 - include_boundary: true/false
 """
-    
+
     if feature:
         base_prompt += f"\n\n## Mevcut Context\n\nFeature: {feature}"
-    
+
     if acceptance_criteria:
-        base_prompt += f"\n\nAcceptance Criteria:\n"
+        base_prompt += "\n\nAcceptance Criteria:\n"
         for idx, ac in enumerate(acceptance_criteria, 1):
             base_prompt += f"{idx}. {ac}\n"
-    
+
     return {
         "name": "create-manual-test",
         "description": "Xray Manual Test oluşturma rehberi",
@@ -81,7 +81,7 @@ def get_select_smoke_tests_prompt(
 ) -> dict[str, Any]:
     """
     Get the prompt template for selecting smoke tests.
-    
+
     MCP Prompt Name: select-smoke-tests
     """
     base_prompt = f"""Sen bir QA Lead'sin. Mevcut test case havuzundan Smoke test suite'i 
@@ -115,7 +115,7 @@ suite.compose tool'unu kullanarak smoke suite oluştur:
 - target: "smoke"
 - max_duration_minutes: {max_duration}
 """
-    
+
     return {
         "name": "select-smoke-tests",
         "description": "Smoke test seçimi rehberi",
@@ -141,7 +141,7 @@ def get_generate_negative_scenarios_prompt(
 ) -> dict[str, Any]:
     """
     Get the prompt template for generating negative test scenarios.
-    
+
     MCP Prompt Name: generate-negative-scenarios
     """
     base_prompt = """Sen bir QA Security uzmanısın. Pozitif test case'lere karşılık gelen 
@@ -188,10 +188,10 @@ testcase.generate tool'unu kullanarak negatif test case'ler oluştur:
 - include_negative: true
 - scenario_type: negative
 """
-    
+
     if feature:
         base_prompt += f"\n\n## Mevcut Context\n\nFeature: {feature}"
-    
+
     return {
         "name": "generate-negative-scenarios",
         "description": "Negatif senaryo üretimi rehberi",
@@ -217,7 +217,7 @@ def get_review_test_coverage_prompt(
 ) -> dict[str, Any]:
     """
     Get the prompt template for reviewing test coverage.
-    
+
     MCP Prompt Name: review-test-coverage
     """
     base_prompt = """Sen bir QA Manager'sın. Test suite'in kapsamını analiz etmen ve 
@@ -254,7 +254,7 @@ suite.coverage_report tool'unu kullanarak analiz yap:
 - requirements: Gereksinim listesi (opsiyonel)
 - modules: Modül listesi (opsiyonel)
 """
-    
+
     return {
         "name": "review-test-coverage",
         "description": "Test kapsam analizi rehberi",

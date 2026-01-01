@@ -87,18 +87,14 @@ class TestLintTool:
                 "title": "Test Case Number One",
                 "description": "Description for test case one",
                 "preconditions": ["Ready"],
-                "steps": [
-                    {"step_number": 1, "action": "Do action", "expected_result": "Result"}
-                ],
+                "steps": [{"step_number": 1, "action": "Do action", "expected_result": "Result"}],
                 "expected_result": "Done",
             },
             {
                 "title": "Test Case Number Two",
                 "description": "Description for test case two",
                 "preconditions": ["Ready"],
-                "steps": [
-                    {"step_number": 1, "action": "Do action", "expected_result": "Result"}
-                ],
+                "steps": [{"step_number": 1, "action": "Do action", "expected_result": "Result"}],
                 "expected_result": "Done",
             },
         ]
@@ -176,7 +172,13 @@ class TestToXrayTool:
             "title": "Test with Custom Fields for Xray",
             "description": "Testing custom field mapping for Xray conversion",
             "preconditions": ["System is ready for testing"],
-            "steps": [{"step_number": 1, "action": "Perform the action", "expected_result": "See the result"}],
+            "steps": [
+                {
+                    "step_number": 1,
+                    "action": "Perform the action",
+                    "expected_result": "See the result",
+                }
+            ],
             "expected_result": "Conversion completes successfully",
             "risk_level": "high",
         }
@@ -202,7 +204,13 @@ class TestComposeTool:
                 "title": "Critical Login Test for Authentication",
                 "description": "Test login functionality for critical path",
                 "preconditions": ["System is ready for testing"],
-                "steps": [{"step_number": 1, "action": "Login to the system", "expected_result": "Login succeeds"}],
+                "steps": [
+                    {
+                        "step_number": 1,
+                        "action": "Login to the system",
+                        "expected_result": "Login succeeds",
+                    }
+                ],
                 "expected_result": "User is logged in successfully",
                 "risk_level": "critical",
                 "priority": "P0",
@@ -213,7 +221,13 @@ class TestComposeTool:
                 "title": "Low Priority Feature Test Case",
                 "description": "Test minor feature functionality",
                 "preconditions": ["System is ready for testing"],
-                "steps": [{"step_number": 1, "action": "Test the feature", "expected_result": "Feature works"}],
+                "steps": [
+                    {
+                        "step_number": 1,
+                        "action": "Test the feature",
+                        "expected_result": "Feature works",
+                    }
+                ],
                 "expected_result": "Feature test completes successfully",
                 "risk_level": "low",
                 "priority": "P3",
@@ -233,7 +247,13 @@ class TestComposeTool:
                 "title": "Module A Test Case for Coverage",
                 "description": "Testing module A functionality for coverage report",
                 "preconditions": ["System is ready for testing"],
-                "steps": [{"step_number": 1, "action": "Test the module", "expected_result": "Module works correctly"}],
+                "steps": [
+                    {
+                        "step_number": 1,
+                        "action": "Test the module",
+                        "expected_result": "Module works correctly",
+                    }
+                ],
                 "expected_result": "Module test completes successfully",
                 "module": "module_a",
                 "requirements": ["REQ-001"],

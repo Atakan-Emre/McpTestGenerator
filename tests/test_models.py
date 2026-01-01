@@ -77,7 +77,11 @@ class TestTestCaseModel:
             description="Testing that timestamp fields are generated automatically",
             preconditions=["System is ready"],
             steps=[
-                TestStep(step_number=1, action="Perform action here", expected_result="Result is observed")
+                TestStep(
+                    step_number=1,
+                    action="Perform action here",
+                    expected_result="Result is observed",
+                )
             ],
             expected_result="Test completes with timestamps set",
         )

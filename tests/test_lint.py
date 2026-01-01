@@ -56,7 +56,9 @@ class TestLintEngine:
             description="This is a login test case",  # Duplicate of title essentially
             preconditions=[],  # Missing preconditions
             steps=[
-                TestStep(step_number=1, action="Login to system", expected_result="It works correctly"),  # Vague
+                TestStep(
+                    step_number=1, action="Login to system", expected_result="It works correctly"
+                ),  # Vague
             ],
             expected_result="Everything works fine",  # Vague
         )
@@ -94,9 +96,7 @@ class TestLintEngine:
             expected_result="Test completes without any issues",
         )
         result = lint_engine.lint(tc)
-        precondition_issues = [
-            i for i in result.issues if "preconditions" in i.field
-        ]
+        precondition_issues = [i for i in result.issues if "preconditions" in i.field]
         assert len(precondition_issues) > 0
 
     def test_lint_generic_title(self, lint_engine):

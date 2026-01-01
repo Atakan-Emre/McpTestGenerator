@@ -8,7 +8,6 @@ import json
 from pathlib import Path
 from typing import Any
 
-
 # Resource base path
 RESOURCE_DIR = Path(__file__).parent.parent.parent.parent / "resources"
 
@@ -16,7 +15,7 @@ RESOURCE_DIR = Path(__file__).parent.parent.parent.parent / "resources"
 def get_testcase_standard() -> dict[str, Any]:
     """
     Get the test case standard definition.
-    
+
     URI: qa://standards/testcase/v1
     """
     return {
@@ -125,7 +124,7 @@ def get_testcase_standard() -> dict[str, Any]:
 def get_lint_rules() -> dict[str, Any]:
     """
     Get the lint rules definition.
-    
+
     URI: qa://checklists/lint-rules/v1
     """
     return {
@@ -246,7 +245,7 @@ def get_lint_rules() -> dict[str, Any]:
 def get_xray_mapping() -> dict[str, Any]:
     """
     Get the Xray field mapping definition.
-    
+
     URI: qa://mappings/xray/v1
     """
     return {
@@ -344,7 +343,7 @@ def get_xray_mapping() -> dict[str, Any]:
 def get_good_examples() -> list[dict[str, Any]]:
     """
     Get good test case examples.
-    
+
     URI: qa://examples/good/*
     """
     return [
@@ -392,7 +391,11 @@ def get_good_examples() -> list[dict[str, Any]]:
                     },
                 ],
                 "test_data": [
-                    {"name": "email", "value": "test@example.com", "description": "Geçerli test kullanıcısı emaili"},
+                    {
+                        "name": "email",
+                        "value": "test@example.com",
+                        "description": "Geçerli test kullanıcısı emaili",
+                    },
                     {"name": "password", "value": "ValidP@ss123", "description": "Geçerli şifre"},
                 ],
                 "expected_result": "Kullanıcı başarıyla sisteme giriş yapar, session oluşturulur ve dashboard sayfası görüntülenir",
@@ -466,7 +469,7 @@ def get_good_examples() -> list[dict[str, Any]]:
 def get_bad_examples() -> list[dict[str, Any]]:
     """
     Get bad test case examples (anti-patterns).
-    
+
     URI: qa://examples/bad/*
     """
     return [

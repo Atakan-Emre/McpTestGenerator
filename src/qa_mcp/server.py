@@ -14,29 +14,32 @@ from typing import Any
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import (
-    Tool,
-    TextContent,
-    Resource,
+    GetPromptResult,
     Prompt,
     PromptArgument,
     PromptMessage,
-    GetPromptResult,
+    Resource,
+    TextContent,
+    Tool,
 )
 
-from qa_mcp.tools.generate import generate_testcase
-from qa_mcp.tools.lint import lint_testcase, lint_batch
-from qa_mcp.tools.normalize import normalize_testcase
-from qa_mcp.tools.to_xray import convert_to_xray, convert_batch_to_xray, get_xray_field_mapping_template
-from qa_mcp.tools.compose import compose_suite, coverage_report
-from qa_mcp.resources.standards import (
-    get_testcase_standard,
-    get_lint_rules,
-    get_xray_mapping,
-    get_good_examples,
-    get_bad_examples,
-)
 from qa_mcp.prompts.templates import PROMPT_REGISTRY
-
+from qa_mcp.resources.standards import (
+    get_bad_examples,
+    get_good_examples,
+    get_lint_rules,
+    get_testcase_standard,
+    get_xray_mapping,
+)
+from qa_mcp.tools.compose import compose_suite, coverage_report
+from qa_mcp.tools.generate import generate_testcase
+from qa_mcp.tools.lint import lint_batch, lint_testcase
+from qa_mcp.tools.normalize import normalize_testcase
+from qa_mcp.tools.to_xray import (
+    convert_batch_to_xray,
+    convert_to_xray,
+    get_xray_field_mapping_template,
+)
 
 # Configure logging
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
@@ -58,11 +61,12 @@ server = Server("qa-mcp")
 # Audit Logging
 # ==============================================================================
 
+
 def audit_log(tool_name: str, args: dict[str, Any], result_summary: str) -> None:
     """Log tool invocations for audit purposes."""
     if not AUDIT_LOG_ENABLED:
         return
-    
+
     log_entry = {
         "timestamp": datetime.now().isoformat(),
         "tool": tool_name,
@@ -75,6 +79,7 @@ def audit_log(tool_name: str, args: dict[str, Any], result_summary: str) -> None
 # ==============================================================================
 # Tools
 # ==============================================================================
+
 
 @server.list_tools()
 async def list_tools() -> list[Tool]:
@@ -292,7 +297,7 @@ async def list_tools() -> list[Tool]:
             },
         ),
     ]
-    
+
     return tools
 
 
@@ -300,10 +305,10 @@ async def list_tools() -> list[Tool]:
 async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
     """Handle tool calls."""
     logger.debug(f"Tool called: {name} with args: {arguments}")
-    
+
     try:
         result: Any = None
-        
+
         if name == "testcase.generate":
             result = generate_testcase(
                 feature=arguments["feature"],
@@ -314,7 +319,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
                 include_boundary=arguments.get("include_boundary", True),
             )
             audit_log(name, arguments, f"Generated {result.get('total_generated', 0)} test cases")
-        
+
         elif name == "testcase.lint":
             result = lint_testcase(
                 testcase=arguments["testcase"],
@@ -322,22 +327,30 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
                 strict_mode=arguments.get("strict_mode", False),
             )
             audit_log(name, arguments, f"Lint score: {result.get('score', 0)}")
-        
+
         elif name == "testcase.lint_batch":
             result = lint_batch(
                 testcases=arguments["testcases"],
                 include_improvement_plan=False,
                 strict_mode=arguments.get("strict_mode", False),
             )
-            audit_log(name, arguments, f"Batch lint: {result.get('aggregate', {}).get('average_score', 0)} avg")
-        
+            audit_log(
+                name,
+                arguments,
+                f"Batch lint: {result.get('aggregate', {}).get('average_score', 0)} avg",
+            )
+
         elif name == "testcase.normalize":
             result = normalize_testcase(
                 input_data=arguments["input_data"],
                 source_format=arguments.get("source_format", "auto"),
             )
-            audit_log(name, arguments, f"Normalized from {result.get('source_format_detected', 'unknown')}")
-        
+            audit_log(
+                name,
+                arguments,
+                f"Normalized from {result.get('source_format_detected', 'unknown')}",
+            )
+
         elif name == "testcase.to_xray":
             result = convert_to_xray(
                 testcase=arguments["testcase"],
@@ -347,15 +360,19 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
                 custom_field_mappings=arguments.get("custom_field_mappings"),
             )
             audit_log(name, arguments, f"Converted to Xray for {arguments['project_key']}")
-        
+
         elif name == "testcase.to_xray_batch":
             result = convert_batch_to_xray(
                 testcases=arguments["testcases"],
                 project_key=arguments["project_key"],
                 test_type=arguments.get("test_type", "Manual"),
             )
-            audit_log(name, arguments, f"Batch converted {result.get('summary', {}).get('successful', 0)} to Xray")
-        
+            audit_log(
+                name,
+                arguments,
+                f"Batch converted {result.get('summary', {}).get('successful', 0)} to Xray",
+            )
+
         elif name == "suite.compose":
             result = compose_suite(
                 testcases=arguments["testcases"],
@@ -364,44 +381,56 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
                 max_duration_minutes=arguments.get("max_duration_minutes"),
             )
             audit_log(name, arguments, f"Composed {arguments['target']} suite")
-        
+
         elif name == "suite.coverage_report":
             result = coverage_report(
                 testcases=arguments["testcases"],
                 requirements=arguments.get("requirements"),
                 modules=arguments.get("modules"),
             )
-            audit_log(name, arguments, f"Coverage report for {result.get('total_testcases', 0)} tests")
-        
+            audit_log(
+                name, arguments, f"Coverage report for {result.get('total_testcases', 0)} tests"
+            )
+
         elif name == "xray.get_mapping_template":
             result = get_xray_field_mapping_template()
             audit_log(name, arguments, "Returned mapping template")
-        
+
         else:
-            return [TextContent(
+            return [
+                TextContent(
+                    type="text",
+                    text=json.dumps({"error": f"Unknown tool: {name}"}, ensure_ascii=False),
+                )
+            ]
+
+        return [
+            TextContent(
                 type="text",
-                text=json.dumps({"error": f"Unknown tool: {name}"}, ensure_ascii=False),
-            )]
-        
-        return [TextContent(
-            type="text",
-            text=json.dumps(result, ensure_ascii=False, indent=2, default=str),
-        )]
-    
+                text=json.dumps(result, ensure_ascii=False, indent=2, default=str),
+            )
+        ]
+
     except Exception as e:
         logger.error(f"Tool error: {name} - {str(e)}")
-        return [TextContent(
-            type="text",
-            text=json.dumps({
-                "error": str(e),
-                "tool": name,
-            }, ensure_ascii=False),
-        )]
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(
+                    {
+                        "error": str(e),
+                        "tool": name,
+                    },
+                    ensure_ascii=False,
+                ),
+            )
+        ]
 
 
 # ==============================================================================
 # Resources
 # ==============================================================================
+
 
 @server.list_resources()
 async def list_resources() -> list[Resource]:
@@ -444,7 +473,7 @@ async def list_resources() -> list[Resource]:
 async def read_resource(uri: str) -> str:
     """Read a resource by URI."""
     logger.debug(f"Resource read: {uri}")
-    
+
     resource_map = {
         "qa://standards/testcase/v1": get_testcase_standard,
         "qa://checklists/lint-rules/v1": get_lint_rules,
@@ -452,11 +481,11 @@ async def read_resource(uri: str) -> str:
         "qa://examples/good": get_good_examples,
         "qa://examples/bad": get_bad_examples,
     }
-    
+
     if uri in resource_map:
         data = resource_map[uri]()
         return json.dumps(data, ensure_ascii=False, indent=2)
-    
+
     raise ValueError(f"Unknown resource: {uri}")
 
 
@@ -464,26 +493,29 @@ async def read_resource(uri: str) -> str:
 # Prompts
 # ==============================================================================
 
+
 @server.list_prompts()
 async def list_prompts() -> list[Prompt]:
     """List available prompts."""
     prompts = []
-    
+
     for name, func in PROMPT_REGISTRY.items():
         prompt_data = func()
-        prompts.append(Prompt(
-            name=name,
-            description=prompt_data.get("description", ""),
-            arguments=[
-                PromptArgument(
-                    name=arg["name"],
-                    description=arg.get("description", ""),
-                    required=arg.get("required", False),
-                )
-                for arg in prompt_data.get("arguments", [])
-            ],
-        ))
-    
+        prompts.append(
+            Prompt(
+                name=name,
+                description=prompt_data.get("description", ""),
+                arguments=[
+                    PromptArgument(
+                        name=arg["name"],
+                        description=arg.get("description", ""),
+                        required=arg.get("required", False),
+                    )
+                    for arg in prompt_data.get("arguments", [])
+                ],
+            )
+        )
+
     return prompts
 
 
@@ -491,13 +523,13 @@ async def list_prompts() -> list[Prompt]:
 async def get_prompt(name: str, arguments: dict[str, str] | None = None) -> GetPromptResult:
     """Get a prompt by name."""
     logger.debug(f"Prompt requested: {name} with args: {arguments}")
-    
+
     if name not in PROMPT_REGISTRY:
         raise ValueError(f"Unknown prompt: {name}")
-    
+
     func = PROMPT_REGISTRY[name]
     kwargs = {}
-    
+
     if arguments:
         # Parse arguments based on prompt type
         if name == "create-manual-test":
@@ -507,7 +539,7 @@ async def get_prompt(name: str, arguments: dict[str, str] | None = None) -> GetP
                     kwargs["acceptance_criteria"] = json.loads(arguments["acceptance_criteria"])
                 except json.JSONDecodeError:
                     kwargs["acceptance_criteria"] = [arguments["acceptance_criteria"]]
-        
+
         elif name == "select-smoke-tests":
             if "testcases" in arguments:
                 try:
@@ -516,7 +548,7 @@ async def get_prompt(name: str, arguments: dict[str, str] | None = None) -> GetP
                     pass
             if "max_duration" in arguments:
                 kwargs["max_duration"] = int(arguments["max_duration"])
-        
+
         elif name == "generate-negative-scenarios":
             kwargs["feature"] = arguments.get("feature")
             if "positive_testcases" in arguments:
@@ -524,7 +556,7 @@ async def get_prompt(name: str, arguments: dict[str, str] | None = None) -> GetP
                     kwargs["positive_testcases"] = json.loads(arguments["positive_testcases"])
                 except json.JSONDecodeError:
                     pass
-        
+
         elif name == "review-test-coverage":
             if "testcases" in arguments:
                 try:
@@ -536,9 +568,9 @@ async def get_prompt(name: str, arguments: dict[str, str] | None = None) -> GetP
                     kwargs["requirements"] = json.loads(arguments["requirements"])
                 except json.JSONDecodeError:
                     kwargs["requirements"] = [arguments["requirements"]]
-    
+
     prompt_data = func(**kwargs)
-    
+
     return GetPromptResult(
         description=prompt_data.get("description", ""),
         messages=[
@@ -557,13 +589,14 @@ async def get_prompt(name: str, arguments: dict[str, str] | None = None) -> GetP
 # Main Entry Point
 # ==============================================================================
 
+
 def main() -> None:
     """Main entry point for the QA-MCP server."""
     logger.info("Starting QA-MCP Server v1.0.0")
     logger.info(f"Log level: {LOG_LEVEL}")
     logger.info(f"Write tools enabled: {ENABLE_WRITE_TOOLS}")
     logger.info(f"Audit logging enabled: {AUDIT_LOG_ENABLED}")
-    
+
     async def run_server():
         async with stdio_server() as (read_stream, write_stream):
             await server.run(
@@ -571,7 +604,7 @@ def main() -> None:
                 write_stream,
                 server.create_initialization_options(),
             )
-    
+
     asyncio.run(run_server())
 
 

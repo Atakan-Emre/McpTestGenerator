@@ -7,11 +7,13 @@ This module defines the standard test case structure used throughout QA-MCP.
 from datetime import datetime
 from enum import Enum
 from typing import Any
+
 from pydantic import BaseModel, Field
 
 
 class RiskLevel(str, Enum):
     """Risk level classification for test cases."""
+
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
@@ -20,6 +22,7 @@ class RiskLevel(str, Enum):
 
 class Priority(str, Enum):
     """Test case priority."""
+
     P0 = "P0"  # Critical - Must run every build
     P1 = "P1"  # High - Must run every release
     P2 = "P2"  # Medium - Run in regression
@@ -28,6 +31,7 @@ class Priority(str, Enum):
 
 class TestType(str, Enum):
     """Type of test case."""
+
     MANUAL = "Manual"
     AUTOMATED = "Automated"
     GENERIC = "Generic"
@@ -35,6 +39,7 @@ class TestType(str, Enum):
 
 class SuiteType(str, Enum):
     """Type of test suite."""
+
     SMOKE = "smoke"
     SANITY = "sanity"
     REGRESSION = "regression"
@@ -45,6 +50,7 @@ class SuiteType(str, Enum):
 
 class ScenarioType(str, Enum):
     """Type of test scenario."""
+
     POSITIVE = "positive"
     NEGATIVE = "negative"
     BOUNDARY = "boundary"
@@ -54,6 +60,7 @@ class ScenarioType(str, Enum):
 
 class TestData(BaseModel):
     """Test data definition."""
+
     name: str = Field(..., description="Data variable name")
     value: Any = Field(..., description="Test data value")
     description: str | None = Field(None, description="Description of this data point")
@@ -63,6 +70,7 @@ class TestData(BaseModel):
 
 class TestStep(BaseModel):
     """Individual test step."""
+
     step_number: int = Field(..., ge=1, description="Step sequence number")
     action: str = Field(..., min_length=5, description="Action to perform")
     expected_result: str = Field(..., min_length=5, description="Expected result")
@@ -73,14 +81,15 @@ class TestStep(BaseModel):
 class TestCase(BaseModel):
     """
     Standard test case structure.
-    
+
     This is the core data model that all QA-MCP tools work with.
     """
+
     # Identification
     id: str | None = Field(None, description="Unique identifier")
     title: str = Field(..., min_length=10, max_length=200, description="Test case title")
     description: str = Field(..., min_length=20, description="Detailed description")
-    
+
     # Classification
     module: str | None = Field(None, description="Module/component being tested")
     feature: str | None = Field(None, description="Feature being tested")
@@ -88,49 +97,41 @@ class TestCase(BaseModel):
     risk_level: RiskLevel = Field(RiskLevel.MEDIUM, description="Risk level")
     priority: Priority = Field(Priority.P2, description="Test priority")
     test_type: TestType = Field(TestType.MANUAL, description="Manual/Automated/Generic")
-    
+
     # Prerequisites
     preconditions: list[str] = Field(
-        default_factory=list,
-        description="Conditions that must be true before test execution"
+        default_factory=list, description="Conditions that must be true before test execution"
     )
-    
+
     # Test execution
     steps: list[TestStep] = Field(
-        default_factory=list,
-        min_length=1,
-        description="Test steps to execute"
+        default_factory=list, min_length=1, description="Test steps to execute"
     )
-    
+
     # Test data
     test_data: list[TestData] = Field(
-        default_factory=list,
-        description="Test data required for execution"
+        default_factory=list, description="Test data required for execution"
     )
-    
+
     # Expected outcomes
     expected_result: str = Field(..., min_length=10, description="Overall expected result")
-    
+
     # Metadata
     tags: list[str] = Field(default_factory=list, description="Tags for categorization")
     labels: list[str] = Field(default_factory=list, description="Labels (smoke, regression, etc.)")
     estimated_duration_minutes: int | None = Field(
         None, ge=1, le=480, description="Estimated execution time"
     )
-    
+
     # Traceability
-    requirements: list[str] = Field(
-        default_factory=list, description="Linked requirement IDs"
-    )
-    related_testcases: list[str] = Field(
-        default_factory=list, description="Related test case IDs"
-    )
-    
+    requirements: list[str] = Field(default_factory=list, description="Linked requirement IDs")
+    related_testcases: list[str] = Field(default_factory=list, description="Related test case IDs")
+
     # Audit
     created_at: datetime | None = Field(None, description="Creation timestamp")
     updated_at: datetime | None = Field(None, description="Last update timestamp")
     author: str | None = Field(None, description="Test case author")
-    
+
     def model_post_init(self, __context: Any) -> None:
         """Set timestamps if not provided."""
         if self.created_at is None:
@@ -141,13 +142,15 @@ class TestCase(BaseModel):
 
 class LintSeverity(str, Enum):
     """Severity level for lint issues."""
-    ERROR = "error"      # Must fix
+
+    ERROR = "error"  # Must fix
     WARNING = "warning"  # Should fix
-    INFO = "info"        # Nice to have
+    INFO = "info"  # Nice to have
 
 
 class LintIssue(BaseModel):
     """Individual lint issue."""
+
     severity: LintSeverity = Field(..., description="Issue severity")
     field: str = Field(..., description="Field with the issue")
     rule: str = Field(..., description="Lint rule that triggered this")
@@ -157,12 +160,13 @@ class LintIssue(BaseModel):
 
 class LintResult(BaseModel):
     """Result of linting a test case."""
+
     score: int = Field(..., ge=0, le=100, description="Quality score (0-100)")
     grade: str = Field(..., description="Letter grade (A-F)")
     issues: list[LintIssue] = Field(default_factory=list, description="Found issues")
     suggestions: list[str] = Field(default_factory=list, description="General suggestions")
     passed: bool = Field(..., description="Did it pass minimum quality threshold?")
-    
+
     @classmethod
     def calculate_grade(cls, score: int) -> str:
         """Calculate letter grade from score."""
@@ -180,6 +184,7 @@ class LintResult(BaseModel):
 
 class XrayTestCase(BaseModel):
     """Xray-compatible test case format."""
+
     testtype: str = Field("Manual", description="Test type")
     summary: str = Field(..., description="Test summary/title")
     preconditions: str | None = Field(None, description="Preconditions text")
@@ -192,6 +197,7 @@ class XrayTestCase(BaseModel):
 
 class SuiteComposition(BaseModel):
     """Result of suite composition."""
+
     suite_type: SuiteType = Field(..., description="Type of suite")
     name: str = Field(..., description="Suite name")
     description: str = Field(..., description="Suite description")

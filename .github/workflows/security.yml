@@ -59,6 +59,7 @@ jobs:
           push: false
           load: true
           tags: qamcp/qa-mcp:scan
+          platforms: linux/amd64
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master

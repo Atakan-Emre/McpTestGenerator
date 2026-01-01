@@ -4,8 +4,8 @@ Test Case Lint Tool.
 Analyzes test cases for quality issues and provides improvement suggestions.
 """
 
-from qa_mcp.core.models import TestCase, LintResult
 from qa_mcp.core.lint import LintEngine
+from qa_mcp.core.models import LintResult, TestCase
 from qa_mcp.core.standards import TestCaseStandard
 
 
@@ -16,12 +16,12 @@ def lint_testcase(
 ) -> dict:
     """
     Lint a test case and return quality analysis.
-    
+
     Args:
         testcase: Test case dictionary to analyze
         include_improvement_plan: Whether to include prioritized improvement plan
         strict_mode: If True, applies stricter validation rules
-        
+
     Returns:
         Dictionary containing:
         - score: Quality score (0-100)
@@ -35,9 +35,9 @@ def lint_testcase(
     standard = TestCaseStandard.get_default()
     if strict_mode:
         standard.minimum_score = 75  # Higher threshold in strict mode
-    
+
     engine = LintEngine(standard)
-    
+
     # Parse test case
     try:
         tc = TestCase(**testcase)
@@ -46,21 +46,23 @@ def lint_testcase(
             "score": 0,
             "grade": "F",
             "passed": False,
-            "issues": [{
-                "severity": "error",
-                "field": "structure",
-                "rule": "valid_structure",
-                "message": f"Test case yapısı geçersiz: {str(e)}",
-                "suggestion": "Test case'in gerekli alanları içerdiğinden emin olun",
-            }],
+            "issues": [
+                {
+                    "severity": "error",
+                    "field": "structure",
+                    "rule": "valid_structure",
+                    "message": f"Test case yapısı geçersiz: {str(e)}",
+                    "suggestion": "Test case'in gerekli alanları içerdiğinden emin olun",
+                }
+            ],
             "suggestions": ["Test case yapısını QA-MCP standardına göre düzeltin"],
             "improvement_plan": [],
             "error": str(e),
         }
-    
+
     # Run lint
     result: LintResult = engine.lint(tc)
-    
+
     # Build response
     response = {
         "score": result.score,
@@ -78,11 +80,11 @@ def lint_testcase(
         ],
         "suggestions": result.suggestions,
     }
-    
+
     # Add improvement plan if requested
     if include_improvement_plan:
         response["improvement_plan"] = engine.get_improvement_plan(result)
-    
+
     # Add summary statistics
     response["summary"] = {
         "total_issues": len(result.issues),
@@ -91,7 +93,7 @@ def lint_testcase(
         "info": sum(1 for i in result.issues if i.severity.value == "info"),
         "minimum_score": standard.minimum_score,
     }
-    
+
     return response
 
 
@@ -102,12 +104,12 @@ def lint_batch(
 ) -> dict:
     """
     Lint multiple test cases and provide aggregate analysis.
-    
+
     Args:
         testcases: List of test case dictionaries
         include_improvement_plan: Whether to include improvement plans
         strict_mode: If True, applies stricter validation rules
-        
+
     Returns:
         Dictionary containing:
         - results: Individual lint results for each test case
@@ -118,35 +120,35 @@ def lint_batch(
     total_score = 0
     total_passed = 0
     all_issues = []
-    
+
     for idx, tc in enumerate(testcases):
         result = lint_testcase(tc, include_improvement_plan, strict_mode)
         result["index"] = idx
-        result["testcase_id"] = tc.get("id", f"TC-{idx+1}")
+        result["testcase_id"] = tc.get("id", f"TC-{idx + 1}")
         results.append(result)
-        
+
         total_score += result["score"]
         if result["passed"]:
             total_passed += 1
         all_issues.extend(result["issues"])
-    
+
     # Calculate aggregate statistics
     count = len(testcases)
     avg_score = total_score / count if count > 0 else 0
     pass_rate = (total_passed / count * 100) if count > 0 else 0
-    
+
     # Find common issues
     issue_counts = {}
     for issue in all_issues:
         key = issue["rule"]
         issue_counts[key] = issue_counts.get(key, 0) + 1
-    
+
     common_issues = sorted(
         [{"rule": k, "count": v} for k, v in issue_counts.items()],
         key=lambda x: x["count"],
         reverse=True,
     )[:5]  # Top 5 common issues
-    
+
     # Generate recommendations
     recommendations = []
     if avg_score < 60:
@@ -154,10 +156,14 @@ def lint_batch(
     if any(i["rule"] == "preconditions.required" for i in common_issues):
         recommendations.append("Birçok test case'de ön koşullar eksik. Bu alanı zorunlu kılın.")
     if any(i["rule"] == "test_data.recommended" for i in common_issues):
-        recommendations.append("Test data tanımlaması yetersiz. Data-driven testing pratiklerini uygulayın.")
+        recommendations.append(
+            "Test data tanımlaması yetersiz. Data-driven testing pratiklerini uygulayın."
+        )
     if pass_rate < 70:
-        recommendations.append(f"Geçme oranı düşük (%{pass_rate:.1f}). Kalite kapısı standartlarını gözden geçirin.")
-    
+        recommendations.append(
+            f"Geçme oranı düşük (%{pass_rate:.1f}). Kalite kapısı standartlarını gözden geçirin."
+        )
+
     return {
         "results": results,
         "aggregate": {

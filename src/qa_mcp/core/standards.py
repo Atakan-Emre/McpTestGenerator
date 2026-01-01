@@ -5,11 +5,13 @@ Defines the rules and structure for standardized test cases.
 """
 
 from typing import Any
+
 from pydantic import BaseModel, Field
 
 
 class FieldRequirement(BaseModel):
     """Requirement definition for a field."""
+
     required: bool = True
     min_length: int | None = None
     max_length: int | None = None
@@ -21,12 +23,13 @@ class FieldRequirement(BaseModel):
 class TestCaseStandard(BaseModel):
     """
     Test case standard definition.
-    
+
     This defines what makes a "good" test case according to organizational standards.
     """
+
     version: str = Field("1.0", description="Standard version")
     name: str = Field("QA-MCP Test Case Standard", description="Standard name")
-    
+
     # Field requirements
     fields: dict[str, FieldRequirement] = Field(
         default_factory=lambda: {
@@ -34,53 +37,46 @@ class TestCaseStandard(BaseModel):
                 required=True,
                 min_length=10,
                 max_length=200,
-                description="Clear, descriptive title that indicates what is being tested"
+                description="Clear, descriptive title that indicates what is being tested",
             ),
             "description": FieldRequirement(
                 required=True,
                 min_length=20,
-                description="Detailed description explaining the purpose and scope"
+                description="Detailed description explaining the purpose and scope",
             ),
             "preconditions": FieldRequirement(
                 required=True,
                 min_length=1,  # At least one precondition
-                description="Conditions that must be true before execution"
+                description="Conditions that must be true before execution",
             ),
             "steps": FieldRequirement(
                 required=True,
                 min_length=1,
-                description="At least one test step with action and expected result"
+                description="At least one test step with action and expected result",
             ),
             "expected_result": FieldRequirement(
-                required=True,
-                min_length=10,
-                description="Clear, verifiable expected outcome"
+                required=True, min_length=10, description="Clear, verifiable expected outcome"
             ),
             "test_data": FieldRequirement(
-                required=False,
-                description="Specific data values used in testing"
+                required=False, description="Specific data values used in testing"
             ),
             "risk_level": FieldRequirement(
                 required=True,
                 allowed_values=["low", "medium", "high", "critical"],
-                description="Risk classification"
+                description="Risk classification",
             ),
             "priority": FieldRequirement(
                 required=True,
                 allowed_values=["P0", "P1", "P2", "P3"],
-                description="Execution priority"
+                description="Execution priority",
             ),
-            "tags": FieldRequirement(
-                required=False,
-                description="Categorization tags"
-            ),
+            "tags": FieldRequirement(required=False, description="Categorization tags"),
             "labels": FieldRequirement(
-                required=False,
-                description="Suite labels (smoke, regression, etc.)"
+                required=False, description="Suite labels (smoke, regression, etc.)"
             ),
         }
     )
-    
+
     # Quality rules
     quality_rules: dict[str, Any] = Field(
         default_factory=lambda: {
@@ -104,7 +100,7 @@ class TestCaseStandard(BaseModel):
             },
         }
     )
-    
+
     # Scoring weights
     scoring_weights: dict[str, int] = Field(
         default_factory=lambda: {
@@ -120,19 +116,19 @@ class TestCaseStandard(BaseModel):
             "traceability": 5,
         }
     )
-    
+
     # Minimum passing score
     minimum_score: int = Field(60, description="Minimum score to pass lint")
-    
+
     @classmethod
     def get_default(cls) -> "TestCaseStandard":
         """Get the default standard."""
         return cls()
-    
+
     def get_field_requirement(self, field_name: str) -> FieldRequirement | None:
         """Get requirement for a specific field."""
         return self.fields.get(field_name)
-    
+
     def is_field_required(self, field_name: str) -> bool:
         """Check if a field is required."""
         req = self.fields.get(field_name)
