@@ -309,7 +309,7 @@ We are committed to providing a welcoming and inspiring community for all.
 
 - 💬 **Discussions**: Use GitHub Discussions for questions
 - 🐛 **Issues**: Use GitHub Issues for bug reports
-- 📧 **Email**: contact@atakanemre.com
+- 📧 **Email**: satakanemre@gmail.com
 
 ## 🙏 Thank You!
 
