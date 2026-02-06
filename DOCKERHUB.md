@@ -1,11 +1,23 @@
 # QA-MCP: Test Standardization & Orchestration Server
 
-[![GitHub](https://img.shields.io/badge/GitHub-Atakan--Emre%2FMcpTestGenerator-blue?logo=github)](https://github.com/Atakan-Emre/McpTestGenerator)
+[![CI](https://github.com/Atakan-Emre/McpTestGenerator/workflows/CI/badge.svg)](https://github.com/Atakan-Emre/McpTestGenerator/actions/workflows/ci.yml)
+[![PyPI version](https://img.shields.io/pypi/v/qa-mcp.svg)](https://pypi.org/project/qa-mcp/)
+[![Docker Pulls](https://img.shields.io/docker/pulls/atakanemree/qa-mcp.svg)](https://hub.docker.com/r/atakanemree/qa-mcp)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](https://github.com/Atakan-Emre/McpTestGenerator/blob/main/LICENSE)
 
 **QA-MCP** is an **MCP (Model Context Protocol) server** that enables LLM clients (Cursor, Claude, VS Code agents, etc.) to perform **standardized test case generation, quality control (lint), Xray format conversion, and test suite composition**.
 
 ## 🚀 Quick Start
+
+### Install via PyPI
+
+```bash
+pip install qa-mcp
+# or with uv (recommended)
+uv pip install qa-mcp
+```
+
+### Run with Docker
 
 ```bash
 # Pull the image

@@ -2,11 +2,13 @@
 
 <div align="center">
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/Atakan-Emre/McpTestGenerator/releases)
-[![Python](https://img.shields.io/badge/python-3.11+-green.svg)](https://www.python.org/downloads/)
-[![License](https://img.shields.io/badge/license-MIT-orange.svg)](https://github.com/Atakan-Emre/McpTestGenerator/blob/main/LICENSE)
+[![CI](https://github.com/Atakan-Emre/McpTestGenerator/workflows/CI/badge.svg)](https://github.com/Atakan-Emre/McpTestGenerator/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/Atakan-Emre/McpTestGenerator/branch/main/graph/badge.svg)](https://codecov.io/gh/Atakan-Emre/McpTestGenerator)
+[![PyPI version](https://img.shields.io/pypi/v/qa-mcp.svg)](https://pypi.org/project/qa-mcp/)
+[![PyPI downloads](https://img.shields.io/pypi/dm/qa-mcp.svg)](https://pypi.org/project/qa-mcp/)
+[![Python](https://img.shields.io/pypi/pyversions/qa-mcp.svg)](https://pypi.org/project/qa-mcp/)
+[![License](https://img.shields.io/badge/license-MIT-orange.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-compatible-purple.svg)](https://modelcontextprotocol.io/)
-[![Tests](https://img.shields.io/badge/tests-26%20passed-brightgreen.svg)](https://github.com/Atakan-Emre/McpTestGenerator/actions)
 [![Docker](https://img.shields.io/docker/pulls/atakanemree/qa-mcp.svg)](https://hub.docker.com/r/atakanemree/qa-mcp)
 
 **🇬🇧 English** | [🇹🇷 Türkçe](#-türkçe)
@@ -40,6 +42,16 @@ QA-MCP provides:
 
 ## 📦 Installation
 
+### With uv (recommended)
+
+```bash
+# Install uv package manager
+pip install uv
+
+# Install qa-mcp
+uv pip install qa-mcp
+```
+
 ### With pip
 
 ```bash
@@ -51,6 +63,11 @@ pip install qa-mcp
 ```bash
 git clone https://github.com/Atakan-Emre/McpTestGenerator.git
 cd McpTestGenerator
+
+# Using uv (recommended - uses locked dependencies)
+uv pip install -e .
+
+# Using pip
 pip install -e .
 ```
 
@@ -183,6 +200,16 @@ QA-MCP şunları sağlar:
 
 ## 📦 Kurulum
 
+### uv ile (önerilen)
+
+```bash
+# uv paket yöneticisini kur
+pip install uv
+
+# qa-mcp'yi kur
+uv pip install qa-mcp
+```
+
 ### pip ile
 
 ```bash
@@ -194,6 +221,11 @@ pip install qa-mcp
 ```bash
 git clone https://github.com/Atakan-Emre/McpTestGenerator.git
 cd McpTestGenerator
+
+# uv ile (önerilen - kilitli bağımlılıkları kullanır)
+uv pip install -e .
+
+# pip ile
 pip install -e .
 ```
 
@@ -307,11 +339,22 @@ MIT License - Copyright (c) 2024-2026 [Atakan Emre](https://github.com/Atakan-Em
 
 ## 🤝 Contributing / Katkıda Bulunma
 
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details on:
+
+- 🚀 Setting up development environment
+- 🧪 Running tests and quality checks
+- 📝 Coding standards and best practices
+- 🔄 Pull request process
+
+**Quick start:**
+
 1. Fork the repository / Fork yapın
 2. Create feature branch / Feature branch oluşturun (`git checkout -b feature/amazing-feature`)
-3. Commit your changes / Commit yapın (`git commit -m 'Add amazing feature'`)
-4. Push to branch / Push yapın (`git push origin feature/amazing-feature`)
-5. Open a Pull Request / Pull Request açın
+3. Make your changes / Değişiklikleri yapın
+4. Run tests / Testleri çalıştırın (`pytest tests/ -v`)
+5. Commit your changes / Commit yapın (`git commit -m 'feat: add amazing feature'`)
+6. Push to branch / Push yapın (`git push origin feature/amazing-feature`)
+7. Open a Pull Request / Pull Request açın
 
 ## 👤 Developer / Geliştirici
 
