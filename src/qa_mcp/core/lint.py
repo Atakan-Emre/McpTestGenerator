@@ -347,7 +347,7 @@ class LintEngine:
         # Check for boundary values if numeric data is present
         if tc.test_data:
             has_boundary = any(d.is_boundary for d in tc.test_data)
-            has_numeric = any(isinstance(d.value, (int, float)) for d in tc.test_data)
+            has_numeric = any(isinstance(d.value, int | float) for d in tc.test_data)
 
             if has_numeric and not has_boundary:
                 suggestions.append(

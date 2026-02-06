@@ -5,13 +5,13 @@ This module defines the standard test case structure used throughout QA-MCP.
 """
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class RiskLevel(str, Enum):
+class RiskLevel(StrEnum):
     """Risk level classification for test cases."""
 
     LOW = "low"
@@ -20,7 +20,7 @@ class RiskLevel(str, Enum):
     CRITICAL = "critical"
 
 
-class Priority(str, Enum):
+class Priority(StrEnum):
     """Test case priority."""
 
     P0 = "P0"  # Critical - Must run every build
@@ -29,7 +29,7 @@ class Priority(str, Enum):
     P3 = "P3"  # Low - Run occasionally
 
 
-class TestType(str, Enum):
+class TestType(StrEnum):
     """Type of test case."""
 
     MANUAL = "Manual"
@@ -37,7 +37,7 @@ class TestType(str, Enum):
     GENERIC = "Generic"
 
 
-class SuiteType(str, Enum):
+class SuiteType(StrEnum):
     """Type of test suite."""
 
     SMOKE = "smoke"
@@ -48,7 +48,7 @@ class SuiteType(str, Enum):
     PERFORMANCE = "performance"
 
 
-class ScenarioType(str, Enum):
+class ScenarioType(StrEnum):
     """Type of test scenario."""
 
     POSITIVE = "positive"
@@ -140,7 +140,7 @@ class TestCase(BaseModel):
             self.updated_at = self.created_at
 
 
-class LintSeverity(str, Enum):
+class LintSeverity(StrEnum):
     """Severity level for lint issues."""
 
     ERROR = "error"  # Must fix
