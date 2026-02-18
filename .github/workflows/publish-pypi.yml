@@ -1,5 +1,5 @@
-# Publish to PyPI / TestPyPI
-# Publishes automatically on release and can be run manually with target selection.
+# Publish to PyPI
+# Publishes automatically on release and can be run manually.
 
 name: Publish to PyPI
 
@@ -7,15 +7,6 @@ on:
   release:
     types: [published]
   workflow_dispatch:
-    inputs:
-      publish_target:
-        description: "Publish destination"
-        required: true
-        default: testpypi
-        type: choice
-        options:
-          - testpypi
-          - pypi
 
 permissions:
   contents: read
@@ -59,32 +50,21 @@ jobs:
           PY
           cat /tmp/package_version.env >> "$GITHUB_ENV"
 
-      - name: Resolve publish target
+      - name: Validate PyPI credentials
         run: |
-          if [ "${{ github.event_name }}" = "release" ]; then
-            echo "PUBLISH_TARGET=pypi" >> "$GITHUB_ENV"
-          else
-            echo "PUBLISH_TARGET=${{ github.event.inputs.publish_target }}" >> "$GITHUB_ENV"
+          if [ -z "${{ secrets.PYPI_API_TOKEN }}" ]; then
+            echo "::error::Missing PYPI_API_TOKEN secret. Add it in Settings > Secrets and variables > Actions."
+            exit 1
           fi
 
-      - name: Publish to Test PyPI
-        if: env.PUBLISH_TARGET == 'testpypi'
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
-        run: |
-          twine upload --repository testpypi dist/* --skip-existing
-
       - name: Publish to PyPI
-        if: env.PUBLISH_TARGET == 'pypi'
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
-          twine upload dist/*
+          twine upload dist/* --skip-existing
 
       - name: Verify PyPI upload
-        if: env.PUBLISH_TARGET == 'pypi'
         run: |
           sleep 60  # Wait for PyPI to process
           pip install qa-mcp==${PACKAGE_VERSION} || echo "Package may still be processing on PyPI"

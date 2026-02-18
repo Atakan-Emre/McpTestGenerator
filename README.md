@@ -60,7 +60,8 @@ qa-mcp --version
 
 PyPI publishing rule:
 - `pip install qa-mcp` becomes available after a successful `Publish to PyPI` workflow run.
-- Manual publish: GitHub `Actions` -> `Publish to PyPI` -> `Run workflow` -> `publish_target: pypi`.
+- Manual publish: GitHub `Actions` -> `Publish to PyPI` -> `Run workflow`.
+- Required GitHub secret: `PYPI_API_TOKEN` for [pypi.org](https://pypi.org/).
 
 ### From source
 
@@ -233,7 +234,8 @@ qa-mcp --version
 
 PyPI yayın kuralı:
 - `pip install qa-mcp`, `Publish to PyPI` workflow'u başarılı tamamlandığında kullanılabilir olur.
-- Manuel yayın: GitHub `Actions` -> `Publish to PyPI` -> `Run workflow` -> `publish_target: pypi`.
+- Manuel yayın: GitHub `Actions` -> `Publish to PyPI` -> `Run workflow`.
+- Gerekli GitHub secret'ı: [pypi.org](https://pypi.org/) için `PYPI_API_TOKEN`.
 
 ### Kaynak koddan
 

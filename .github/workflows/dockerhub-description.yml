@@ -14,15 +14,46 @@ jobs:
   update-description:
     name: Update Docker Hub Description
     runs-on: ubuntu-latest
+    env:
+      DOCKERHUB_REPOSITORY: atakanemree/qa-mcp
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate Docker Hub credentials
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          if [ -z "${DOCKERHUB_USERNAME}" ]; then
+            echo "::error::Missing DOCKERHUB_USERNAME secret."
+            exit 1
+          fi
+
+          if [ -z "${DOCKERHUB_TOKEN}" ]; then
+            echo "::error::Missing DOCKERHUB_TOKEN secret."
+            exit 1
+          fi
+
+          repo_namespace="${DOCKERHUB_REPOSITORY%%/*}"
+          if [ "${DOCKERHUB_USERNAME}" != "${repo_namespace}" ]; then
+            echo "::warning::DOCKERHUB_USERNAME (${DOCKERHUB_USERNAME}) differs from repository namespace (${repo_namespace})."
+            echo "::warning::This is valid only if that account has admin/manage permission on ${DOCKERHUB_REPOSITORY}."
+          fi
+
       - name: Update Docker Hub Description
-        uses: peter-evans/dockerhub-description@v4
+        id: update_description
+        continue-on-error: true
+        uses: peter-evans/dockerhub-description@v5
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-          repository: atakanemree/qa-mcp
+          repository: ${{ env.DOCKERHUB_REPOSITORY }}
           readme-filepath: ./DOCKERHUB.md
           short-description: "QA-MCP: Test Standardization & Orchestration MCP Server for LLM clients"
+
+      - name: Report description sync status
+        if: steps.update_description.outcome != 'success'
+        run: |
+          echo "::warning::Docker Hub description sync failed (non-blocking)."
+          echo "::warning::Check token permissions for ${DOCKERHUB_REPOSITORY} and ensure DOCKERHUB_USERNAME owns or can manage the repo."
