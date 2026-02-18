@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "qa-mcp"
-version = "1.0.0"
+version = "1.0.1"
 description = "QA-MCP: Test Standardization & Orchestration Server - MCP server for test case generation, quality control, and Xray integration"
 readme = "README.md"
 license = "MIT"
