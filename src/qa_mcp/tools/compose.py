@@ -41,8 +41,8 @@ def compose_suite(
         - recommendations: Suggestions for improving coverage
     """
     # Parse test cases
-    parsed_cases = []
-    parse_errors = []
+    parsed_cases: list[TestCase] = []
+    parse_errors: list[str] = []
 
     for idx, tc_dict in enumerate(testcases):
         try:
@@ -62,7 +62,7 @@ def compose_suite(
 
     # Get suite rules
     suite_type = SuiteType(target.lower())
-    rules = SUITE_RULES.get(target.lower(), SUITE_RULES["regression"])
+    rules: dict[str, Any] = SUITE_RULES.get(target.lower(), SUITE_RULES["regression"])
 
     # Override max duration if provided
     if max_duration_minutes:
@@ -94,6 +94,8 @@ def compose_suite(
         rationale=f"{len(selected)} test case seçildi, toplam {total_duration} dakika",
     )
 
+    duration_limit = int(rules.get("max_duration_minutes", 999))
+
     return {
         "suite": suite.model_dump(),
         "selected_testcases": [tc.model_dump() for tc in selected],
@@ -101,25 +103,25 @@ def compose_suite(
         "selection_rationale": rationale,
         "coverage_summary": coverage_summary,
         "recommendations": recommendations,
-        "duration_warning": total_duration > rules.get("max_duration_minutes", 999),
+        "duration_warning": total_duration > duration_limit,
     }
 
 
 def _select_testcases(
     testcases: list[TestCase],
     suite_type: SuiteType,
-    rules: dict,
+    rules: dict[str, Any],
 ) -> tuple[list[TestCase], list[TestCase], list[dict]]:
     """Select test cases based on suite rules."""
-    selected = []
-    excluded = []
-    rationale = []
+    selected: list[TestCase] = []
+    excluded: list[TestCase] = []
+    rationale: list[dict[str, Any]] = []
 
     # Get filter criteria
-    priority_filter = rules.get("priority_filter", ["P0", "P1", "P2", "P3"])
-    risk_filter = rules.get("risk_filter", ["critical", "high", "medium", "low"])
-    max_tests = rules.get("max_tests", 999)
-    max_duration = rules.get("max_duration_minutes", 999)
+    priority_filter = [str(p) for p in rules.get("priority_filter", ["P0", "P1", "P2", "P3"])]
+    risk_filter = [str(r) for r in rules.get("risk_filter", ["critical", "high", "medium", "low"])]
+    max_tests = int(rules.get("max_tests", 999))
+    max_duration = int(rules.get("max_duration_minutes", 999))
 
     current_duration = 0
 
@@ -210,19 +212,19 @@ def _build_coverage_summary(
     covered_features = set(tc.feature for tc in selected if tc.feature)
 
     # Scenario type coverage
-    scenario_types = {}
+    scenario_types: dict[str, int] = {}
     for tc in selected:
         st = tc.scenario_type.value if tc.scenario_type else "unknown"
         scenario_types[st] = scenario_types.get(st, 0) + 1
 
     # Risk coverage
-    risk_coverage = {}
+    risk_coverage: dict[str, int] = {}
     for tc in selected:
         rl = tc.risk_level.value if tc.risk_level else "unknown"
         risk_coverage[rl] = risk_coverage.get(rl, 0) + 1
 
     # Priority coverage
-    priority_coverage = {}
+    priority_coverage: dict[str, int] = {}
     for tc in selected:
         p = tc.priority.value if tc.priority else "unknown"
         priority_coverage[p] = priority_coverage.get(p, 0) + 1
@@ -342,7 +344,7 @@ def coverage_report(
         - recommendations: Suggestions for improving coverage
     """
     # Parse test cases
-    parsed_cases = []
+    parsed_cases: list[TestCase] = []
     for tc_dict in testcases:
         try:
             tc = TestCase(**tc_dict)
@@ -351,7 +353,7 @@ def coverage_report(
             continue
 
     # Requirement coverage
-    req_coverage = {}
+    req_coverage: dict[str, list[str]] = {}
     all_covered_reqs = set()
 
     for tc in parsed_cases:
@@ -362,7 +364,7 @@ def coverage_report(
             req_coverage[req].append(tc.id or tc.title)
 
     # Check against provided requirements
-    req_analysis = None
+    req_analysis: dict[str, Any] | None = None
     if requirements:
         covered = set(requirements) & all_covered_reqs
         uncovered = set(requirements) - all_covered_reqs
@@ -379,12 +381,12 @@ def coverage_report(
 
     # Module coverage
     all_tc_modules = set(tc.module for tc in parsed_cases if tc.module)
-    module_test_count = {}
+    module_test_count: dict[str, int] = {}
     for tc in parsed_cases:
         if tc.module:
             module_test_count[tc.module] = module_test_count.get(tc.module, 0) + 1
 
-    module_analysis = None
+    module_analysis: dict[str, Any] | None = None
     if modules:
         covered = set(modules) & all_tc_modules
         uncovered = set(modules) - all_tc_modules
@@ -423,7 +425,7 @@ def coverage_report(
             )
 
     # Identify gaps
-    gaps = []
+    gaps: list[dict[str, Any]] = []
 
     if scenario_distribution["negative"] < scenario_distribution["positive"] * 0.3:
         gaps.append(
@@ -454,7 +456,7 @@ def coverage_report(
         )
 
     # Recommendations
-    recommendations = []
+    recommendations: list[str] = []
 
     total_tests = len(parsed_cases)
     if total_tests < 10:

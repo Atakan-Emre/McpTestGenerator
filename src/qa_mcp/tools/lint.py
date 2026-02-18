@@ -4,9 +4,16 @@ Test Case Lint Tool.
 Analyzes test cases for quality issues and provides improvement suggestions.
 """
 
+from typing import Any, TypedDict
+
 from qa_mcp.core.lint import LintEngine
 from qa_mcp.core.models import LintResult, TestCase
 from qa_mcp.core.standards import TestCaseStandard
+
+
+class CommonIssue(TypedDict):
+    rule: str
+    count: int
 
 
 def lint_testcase(
@@ -116,10 +123,10 @@ def lint_batch(
         - aggregate: Aggregate statistics
         - recommendations: Overall recommendations
     """
-    results = []
+    results: list[dict[str, Any]] = []
     total_score = 0
     total_passed = 0
-    all_issues = []
+    all_issues: list[dict[str, Any]] = []
 
     for idx, tc in enumerate(testcases):
         result = lint_testcase(tc, include_improvement_plan, strict_mode)
@@ -138,13 +145,15 @@ def lint_batch(
     pass_rate = (total_passed / count * 100) if count > 0 else 0
 
     # Find common issues
-    issue_counts = {}
+    issue_counts: dict[str, int] = {}
     for issue in all_issues:
-        key = issue["rule"]
-        issue_counts[key] = issue_counts.get(key, 0) + 1
+        key = issue.get("rule")
+        if isinstance(key, str):
+            issue_counts[key] = issue_counts.get(key, 0) + 1
 
+    issue_items: list[CommonIssue] = [{"rule": k, "count": v} for k, v in issue_counts.items()]
     common_issues = sorted(
-        [{"rule": k, "count": v} for k, v in issue_counts.items()],
+        issue_items,
         key=lambda x: x["count"],
         reverse=True,
     )[:5]  # Top 5 common issues

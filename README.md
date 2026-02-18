@@ -3,9 +3,7 @@
 <div align="center">
 
 [![CI](https://github.com/Atakan-Emre/McpTestGenerator/workflows/CI/badge.svg)](https://github.com/Atakan-Emre/McpTestGenerator/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/Atakan-Emre/McpTestGenerator/branch/main/graph/badge.svg)](https://codecov.io/gh/Atakan-Emre/McpTestGenerator)
 [![PyPI version](https://img.shields.io/pypi/v/qa-mcp.svg)](https://pypi.org/project/qa-mcp/)
-[![PyPI downloads](https://img.shields.io/pypi/dm/qa-mcp.svg)](https://pypi.org/project/qa-mcp/)
 [![Python](https://img.shields.io/pypi/pyversions/qa-mcp.svg)](https://pypi.org/project/qa-mcp/)
 [![License](https://img.shields.io/badge/license-MIT-orange.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-compatible-purple.svg)](https://modelcontextprotocol.io/)

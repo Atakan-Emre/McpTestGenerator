@@ -73,8 +73,8 @@ pip install -e .
 ### Option 3: With Docker
 
 ```bash
-docker pull atakanemree/qa-mcp:1.0.0
-docker run -i --rm atakanemree/qa-mcp:1.0.0
+docker pull atakanemree/qa-mcp:latest
+docker run -i --rm atakanemree/qa-mcp:latest
 ```
 
 ### Development Environment
@@ -130,7 +130,7 @@ Add to `~/.claude/claude_desktop_config.json`:
   "mcpServers": {
     "qa-mcp": {
       "command": "docker",
-      "args": ["run", "-i", "--rm", "atakanemree/qa-mcp:1.0.0"]
+      "args": ["run", "-i", "--rm", "atakanemree/qa-mcp:latest"]
     }
   }
 }
@@ -401,8 +401,8 @@ pip install -e .
 ### Seçenek 3: Docker ile
 
 ```bash
-docker pull atakanemree/qa-mcp:1.0.0
-docker run -i --rm atakanemree/qa-mcp:1.0.0
+docker pull atakanemree/qa-mcp:latest
+docker run -i --rm atakanemree/qa-mcp:latest
 ```
 
 ### Geliştirme Ortamı
@@ -458,7 +458,7 @@ pytest tests/ -v
   "mcpServers": {
     "qa-mcp": {
       "command": "docker",
-      "args": ["run", "-i", "--rm", "atakanemree/qa-mcp:1.0.0"]
+      "args": ["run", "-i", "--rm", "atakanemree/qa-mcp:latest"]
     }
   }
 }

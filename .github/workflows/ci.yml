@@ -41,7 +41,6 @@ jobs:
 
       - name: Run MyPy (type checking)
         run: mypy src/qa_mcp --ignore-missing-imports
-        continue-on-error: true
 
   # ==========================================================================
   # Tests

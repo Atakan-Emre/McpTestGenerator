@@ -46,8 +46,8 @@ def convert_to_xray(
         - field_mapping_report: Which fields were mapped
         - warnings: Any conversion warnings
     """
-    warnings = []
-    field_mapping_report = {
+    warnings: list[str] = []
+    field_mapping_report: dict[str, list[str]] = {
         "mapped_fields": [],
         "unmapped_fields": [],
         "custom_fields_used": [],
@@ -65,7 +65,7 @@ def convert_to_xray(
         }
 
     # Build Xray payload
-    xray_payload = {
+    xray_payload: dict[str, Any] = {
         "testtype": XRAY_TEST_TYPE_MAP.get(test_type, "Manual"),
         "fields": {
             "project": {"key": project_key},
@@ -254,7 +254,7 @@ def _build_custom_fields(
     custom_field_mappings: dict[str, str] | None,
 ) -> dict[str, Any]:
     """Build custom field values based on mappings."""
-    custom_fields = {}
+    custom_fields: dict[str, Any] = {}
 
     if not custom_field_mappings:
         return custom_fields

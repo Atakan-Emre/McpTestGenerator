@@ -9,8 +9,9 @@ import asyncio
 import json
 import logging
 import os
+from collections.abc import Callable
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
@@ -42,6 +43,8 @@ from qa_mcp.tools.to_xray import (
     convert_to_xray,
     get_xray_field_mapping_template,
 )
+
+PromptFactory = Callable[..., dict[str, Any]]
 
 # Configure logging
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
@@ -502,7 +505,7 @@ async def list_prompts() -> list[Prompt]:
     prompts = []
 
     for name, func in PROMPT_REGISTRY.items():
-        prompt_data = func()
+        prompt_data = cast(PromptFactory, func)()
         prompts.append(
             Prompt(
                 name=name,
@@ -529,8 +532,8 @@ async def get_prompt(name: str, arguments: dict[str, str] | None = None) -> GetP
     if name not in PROMPT_REGISTRY:
         raise ValueError(f"Unknown prompt: {name}")
 
-    func = PROMPT_REGISTRY[name]
-    kwargs = {}
+    func = cast(PromptFactory, PROMPT_REGISTRY[name])
+    kwargs: dict[str, Any] = {}
 
     if arguments:
         # Parse arguments based on prompt type

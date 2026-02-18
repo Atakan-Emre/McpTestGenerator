@@ -35,8 +35,9 @@ def normalize_testcase(
         - transformations: List of transformations applied
         - warnings: Any warnings during normalization
     """
-    transformations = []
-    warnings = []
+    transformations: list[str] = []
+    warnings: list[str] = []
+    text_input = input_data if isinstance(input_data, str) else str(input_data)
 
     # Detect format if auto
     if source_format == "auto":
@@ -46,13 +47,13 @@ def normalize_testcase(
     # Parse based on format
     try:
         if source_format == "gherkin":
-            testcase, parse_warnings = _parse_gherkin(input_data)
+            testcase, parse_warnings = _parse_gherkin(text_input)
         elif source_format == "markdown":
-            testcase, parse_warnings = _parse_markdown(input_data)
+            testcase, parse_warnings = _parse_markdown(text_input)
         elif source_format == "json" or isinstance(input_data, dict):
             testcase, parse_warnings = _parse_json(input_data)
         else:  # plain text
-            testcase, parse_warnings = _parse_plain_text(input_data)
+            testcase, parse_warnings = _parse_plain_text(text_input)
 
         warnings.extend(parse_warnings)
 
@@ -276,7 +277,7 @@ def _parse_markdown(input_data: str) -> tuple[TestCase, list[str]]:
 
 def _parse_json(input_data: str | dict) -> tuple[TestCase, list[str]]:
     """Parse JSON/dict format test case."""
-    warnings = []
+    warnings: list[str] = []
 
     if isinstance(input_data, str):
         import json
@@ -419,7 +420,7 @@ def _parse_plain_text(input_data: str) -> tuple[TestCase, list[str]]:
 
 def _fill_missing_fields(tc: TestCase) -> tuple[TestCase, list[str]]:
     """Fill missing fields with defaults."""
-    warnings = []
+    warnings: list[str] = []
 
     if not tc.id:
         tc.id = f"TC-{uuid.uuid4().hex[:8].upper()}"

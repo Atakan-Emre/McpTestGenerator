@@ -6,6 +6,7 @@ Generates standardized test cases from feature descriptions and acceptance crite
 
 import uuid
 from datetime import datetime
+from typing import TypedDict
 
 from qa_mcp.core.models import (
     Priority,
@@ -16,6 +17,13 @@ from qa_mcp.core.models import (
     TestStep,
 )
 from qa_mcp.core.standards import NEGATIVE_SCENARIO_PATTERNS
+
+
+class CoverageSummary(TypedDict):
+    positive_scenarios: int
+    negative_scenarios: int
+    boundary_tests: int
+    acceptance_criteria_covered: list[str]
 
 
 def generate_testcase(
@@ -49,7 +57,7 @@ def generate_testcase(
     """
     testcases = []
     suggestions = []
-    coverage = {
+    coverage: CoverageSummary = {
         "positive_scenarios": 0,
         "negative_scenarios": 0,
         "boundary_tests": 0,

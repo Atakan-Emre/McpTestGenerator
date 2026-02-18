@@ -1,5 +1,5 @@
-# Publish to PyPI
-# This workflow automatically publishes the package to PyPI when a new release is created
+# Publish to PyPI / TestPyPI
+# Publishes automatically on release and can be run manually with target selection.
 
 name: Publish to PyPI
 
