@@ -60,6 +60,10 @@ qa-mcp --help
 qa-mcp --version
 ```
 
+PyPI publishing rule:
+- `pip install qa-mcp` becomes available after a successful `Publish to PyPI` workflow run.
+- Manual publish: GitHub `Actions` -> `Publish to PyPI` -> `Run workflow` -> `publish_target: pypi`.
+
 ### From source
 
 ```bash
@@ -228,6 +232,10 @@ pip install qa-mcp
 qa-mcp --help
 qa-mcp --version
 ```
+
+PyPI yayın kuralı:
+- `pip install qa-mcp`, `Publish to PyPI` workflow'u başarılı tamamlandığında kullanılabilir olur.
+- Manuel yayın: GitHub `Actions` -> `Publish to PyPI` -> `Run workflow` -> `publish_target: pypi`.
 
 ### Kaynak koddan
 

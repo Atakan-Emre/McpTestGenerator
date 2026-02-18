@@ -6,7 +6,16 @@ name: Publish to PyPI
 on:
   release:
     types: [published]
-  workflow_dispatch:  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      publish_target:
+        description: "Publish destination"
+        required: true
+        default: testpypi
+        type: choice
+        options:
+          - testpypi
+          - pypi
 
 permissions:
   contents: read
@@ -50,8 +59,16 @@ jobs:
           PY
           cat /tmp/package_version.env >> "$GITHUB_ENV"
 
+      - name: Resolve publish target
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "PUBLISH_TARGET=pypi" >> "$GITHUB_ENV"
+          else
+            echo "PUBLISH_TARGET=${{ github.event.inputs.publish_target }}" >> "$GITHUB_ENV"
+          fi
+
       - name: Publish to Test PyPI
-        if: github.event_name == 'workflow_dispatch'
+        if: env.PUBLISH_TARGET == 'testpypi'
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
@@ -59,7 +76,7 @@ jobs:
           twine upload --repository testpypi dist/* --skip-existing
 
       - name: Publish to PyPI
-        if: github.event_name == 'release'
+        if: env.PUBLISH_TARGET == 'pypi'
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
@@ -67,7 +84,7 @@ jobs:
           twine upload dist/*
 
       - name: Verify PyPI upload
-        if: github.event_name == 'release'
+        if: env.PUBLISH_TARGET == 'pypi'
         run: |
           sleep 60  # Wait for PyPI to process
           pip install qa-mcp==${PACKAGE_VERSION} || echo "Package may still be processing on PyPI"
