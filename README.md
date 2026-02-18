@@ -56,6 +56,8 @@ uv pip install qa-mcp
 
 ```bash
 pip install qa-mcp
+qa-mcp --help
+qa-mcp --version
 ```
 
 ### From source
@@ -104,7 +106,7 @@ Add to your `mcp.json` or `claude_desktop_config.json`:
   "mcpServers": {
     "qa-mcp": {
       "command": "docker",
-      "args": ["run", "-i", "--rm", "atakanemree/qa-mcp:1.0.0"]
+      "args": ["run", "-i", "--rm", "atakanemree/qa-mcp:latest"]
     }
   }
 }
@@ -142,18 +144,27 @@ Add to your `mcp.json` or `claude_desktop_config.json`:
 
 ## 🐳 Docker
 
+Published image: `atakanemree/qa-mcp` (multi-arch: `linux/amd64`, `linux/arm64`)
+
 ```bash
 # Pull image
 docker pull atakanemree/qa-mcp:latest
 
+# Verify CLI
+docker run --rm atakanemree/qa-mcp:latest --help
+
 # Run (stdio mode - default, most secure)
-docker run -i --rm atakanemree/qa-mcp:1.0.0
+docker run -i --rm atakanemree/qa-mcp:latest
 
 # With environment variables
 docker run -i --rm \
   -e LOG_LEVEL=debug \
   -e ENABLE_WRITE_TOOLS=false \
-  atakanemree/qa-mcp:1.0.0
+  atakanemree/qa-mcp:latest
+
+# Local compose (production and dev targets)
+docker compose up qa-mcp
+docker compose --profile dev up qa-mcp-dev
 ```
 
 ## 🔒 Security
@@ -214,6 +225,8 @@ uv pip install qa-mcp
 
 ```bash
 pip install qa-mcp
+qa-mcp --help
+qa-mcp --version
 ```
 
 ### Kaynak koddan
@@ -262,7 +275,7 @@ docker run -i atakanemree/qa-mcp:latest
   "mcpServers": {
     "qa-mcp": {
       "command": "docker",
-      "args": ["run", "-i", "--rm", "atakanemree/qa-mcp:1.0.0"]
+      "args": ["run", "-i", "--rm", "atakanemree/qa-mcp:latest"]
     }
   }
 }
@@ -300,18 +313,27 @@ docker run -i atakanemree/qa-mcp:latest
 
 ## 🐳 Docker
 
+Yayınlanan image: `atakanemree/qa-mcp` (multi-arch: `linux/amd64`, `linux/arm64`)
+
 ```bash
 # Image çekme
 docker pull atakanemree/qa-mcp:latest
 
+# CLI doğrulama
+docker run --rm atakanemree/qa-mcp:latest --help
+
 # Çalıştırma (stdio mode - varsayılan, en güvenli)
-docker run -i --rm atakanemree/qa-mcp:1.0.0
+docker run -i --rm atakanemree/qa-mcp:latest
 
 # Environment variables ile
 docker run -i --rm \
   -e LOG_LEVEL=debug \
   -e ENABLE_WRITE_TOOLS=false \
-  atakanemree/qa-mcp:1.0.0
+  atakanemree/qa-mcp:latest
+
+# Local compose (production ve dev target'ları)
+docker compose up qa-mcp
+docker compose --profile dev up qa-mcp-dev
 ```
 
 ## 🔒 Güvenlik

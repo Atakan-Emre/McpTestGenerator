@@ -1,15 +1,21 @@
 """Tests for core data models."""
 
-import pytest
 from datetime import datetime
+
 from qa_mcp.core.models import (
-    TestCase,
-    TestStep,
-    TestData,
     LintResult,
-    RiskLevel,
     Priority,
+    RiskLevel,
     ScenarioType,
+)
+from qa_mcp.core.models import (
+    TestCase as QaTestCase,
+)
+from qa_mcp.core.models import (
+    TestData as QaTestData,
+)
+from qa_mcp.core.models import (
+    TestStep as QaTestStep,
 )
 
 
@@ -18,12 +24,12 @@ class TestTestCaseModel:
 
     def test_valid_testcase_creation(self):
         """Test creating a valid test case."""
-        tc = TestCase(
+        tc = QaTestCase(
             title="Valid Test Case Title",
             description="This is a valid test case description with enough detail.",
             preconditions=["User is logged in"],
             steps=[
-                TestStep(
+                QaTestStep(
                     step_number=1,
                     action="Click the button",
                     expected_result="Button changes state",
@@ -37,7 +43,7 @@ class TestTestCaseModel:
 
     def test_testcase_with_all_fields(self):
         """Test creating a test case with all optional fields."""
-        tc = TestCase(
+        tc = QaTestCase(
             id="TC-001",
             title="Complete Test Case",
             description="A test case with all fields populated",
@@ -48,15 +54,15 @@ class TestTestCaseModel:
             priority=Priority.P0,
             preconditions=["System is running", "User exists"],
             steps=[
-                TestStep(
+                QaTestStep(
                     step_number=1,
                     action="Navigate to login page",
                     expected_result="Login form is displayed",
                 )
             ],
             test_data=[
-                TestData(name="username", value="testuser"),
-                TestData(name="password", value="secret", is_boundary=False),
+                QaTestData(name="username", value="testuser"),
+                QaTestData(name="password", value="secret", is_boundary=False),
             ],
             expected_result="User is logged in successfully",
             tags=["auth", "login"],
@@ -72,12 +78,12 @@ class TestTestCaseModel:
 
     def test_testcase_auto_timestamps(self):
         """Test that timestamps are auto-generated."""
-        tc = TestCase(
+        tc = QaTestCase(
             title="Test with timestamps generated automatically",
             description="Testing that timestamp fields are generated automatically",
             preconditions=["System is ready"],
             steps=[
-                TestStep(
+                QaTestStep(
                     step_number=1,
                     action="Perform action here",
                     expected_result="Result is observed",
@@ -95,7 +101,7 @@ class TestTestStepModel:
 
     def test_valid_step(self):
         """Test creating a valid step."""
-        step = TestStep(
+        step = QaTestStep(
             step_number=1,
             action="Click the submit button",
             expected_result="Form is submitted successfully",
@@ -104,11 +110,11 @@ class TestTestStepModel:
 
     def test_step_with_test_data(self):
         """Test step with embedded test data."""
-        step = TestStep(
+        step = QaTestStep(
             step_number=1,
             action="Enter username",
             expected_result="Username accepted",
-            test_data=[TestData(name="username", value="test@example.com")],
+            test_data=[QaTestData(name="username", value="test@example.com")],
             notes="Use valid email format",
         )
         assert len(step.test_data) == 1

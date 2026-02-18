@@ -121,10 +121,10 @@ jobs:
           context: .
           push: false
           load: true
-          tags: qamcp/qa-mcp:test
+          tags: atakanemree/qa-mcp:test
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Test Docker image
         run: |
-          docker run --rm qamcp/qa-mcp:test --help
+          docker run --rm atakanemree/qa-mcp:test --help

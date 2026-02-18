@@ -36,6 +36,20 @@ jobs:
       - name: Check package
         run: twine check dist/*
 
+      - name: Resolve package version
+        run: |
+          python - <<'PY'
+          import tomllib
+          from pathlib import Path
+
+          pyproject = Path("pyproject.toml")
+          version = tomllib.loads(pyproject.read_text())["project"]["version"]
+          print(f"PACKAGE_VERSION={version}")
+          with open("/tmp/package_version.env", "w") as f:
+              f.write(f"PACKAGE_VERSION={version}\n")
+          PY
+          cat /tmp/package_version.env >> "$GITHUB_ENV"
+
       - name: Publish to Test PyPI
         if: github.event_name == 'workflow_dispatch'
         env:
@@ -56,4 +70,4 @@ jobs:
         if: github.event_name == 'release'
         run: |
           sleep 60  # Wait for PyPI to process
-          pip install qa-mcp==${{ github.ref_name }} || echo "Package may still be processing on PyPI"
+          pip install qa-mcp==${PACKAGE_VERSION} || echo "Package may still be processing on PyPI"

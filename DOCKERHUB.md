@@ -27,7 +27,7 @@ docker pull atakanemree/qa-mcp:latest
 docker run --rm -it atakanemree/qa-mcp:latest
 
 # Run with HTTP mode
-docker run --rm -p 8080:8080 -e QA_MCP_HTTP_ENABLED=true atakanemree/qa-mcp:latest
+docker run --rm -p 8080:8080 -e HTTP_ENABLED=true atakanemree/qa-mcp:latest
 ```
 
 ## 🛠️ Features
@@ -45,11 +45,11 @@ docker run --rm -p 8080:8080 -e QA_MCP_HTTP_ENABLED=true atakanemree/qa-mcp:late
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `QA_MCP_LOG_LEVEL` | `INFO` | Log level (DEBUG, INFO, WARNING, ERROR) |
-| `QA_MCP_HTTP_ENABLED` | `false` | Enable HTTP server mode |
-| `QA_MCP_HTTP_PORT` | `8080` | HTTP port |
-| `QA_MCP_WRITE_TOOLS` | `false` | Enable write tools |
-| `QA_MCP_AUDIT_LOG` | `true` | Enable audit logging |
+| `LOG_LEVEL` | `info` | Log level (`debug`, `info`, `warning`, `error`) |
+| `HTTP_ENABLED` | `false` | Enable HTTP server mode |
+| `HTTP_PORT` | `8080` | HTTP port |
+| `ENABLE_WRITE_TOOLS` | `false` | Enable write tools |
+| `AUDIT_LOG_ENABLED` | `true` | Enable audit logging |
 
 ## 📦 Tags
 

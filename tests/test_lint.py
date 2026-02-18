@@ -1,8 +1,11 @@
 """Tests for lint engine."""
 
 import pytest
+
 from qa_mcp.core.lint import LintEngine
-from qa_mcp.core.models import TestCase, TestStep, RiskLevel, Priority
+from qa_mcp.core.models import Priority, RiskLevel
+from qa_mcp.core.models import TestCase as QaTestCase
+from qa_mcp.core.models import TestStep as QaTestStep
 
 
 class TestLintEngine:
@@ -16,7 +19,7 @@ class TestLintEngine:
     @pytest.fixture
     def good_testcase(self):
         """Create a well-formed test case."""
-        return TestCase(
+        return QaTestCase(
             title="User Login - Valid credentials authentication",
             description="This test verifies that users can log in with valid email and password credentials.",
             module="auth",
@@ -27,17 +30,17 @@ class TestLintEngine:
                 "User account is active",
             ],
             steps=[
-                TestStep(
+                QaTestStep(
                     step_number=1,
                     action="Navigate to the login page at /login",
                     expected_result="Login form is displayed with email and password fields",
                 ),
-                TestStep(
+                QaTestStep(
                     step_number=2,
                     action="Enter valid email address test@example.com",
                     expected_result="Email is accepted without validation errors",
                 ),
-                TestStep(
+                QaTestStep(
                     step_number=3,
                     action="Enter valid password and click Login button",
                     expected_result="User is redirected to dashboard page",
@@ -51,12 +54,12 @@ class TestLintEngine:
     @pytest.fixture
     def bad_testcase(self):
         """Create a poorly-formed test case (passes validation but has quality issues)."""
-        return TestCase(
+        return QaTestCase(
             title="Login test case",  # Generic title
             description="This is a login test case",  # Duplicate of title essentially
             preconditions=[],  # Missing preconditions
             steps=[
-                TestStep(
+                QaTestStep(
                     step_number=1, action="Login to system", expected_result="It works correctly"
                 ),  # Vague
             ],
@@ -82,12 +85,12 @@ class TestLintEngine:
 
     def test_lint_missing_preconditions(self, lint_engine):
         """Test that missing preconditions are flagged."""
-        tc = TestCase(
+        tc = QaTestCase(
             title="Test without preconditions defined",
             description="This test has no preconditions which is an issue.",
             preconditions=[],
             steps=[
-                TestStep(
+                QaTestStep(
                     step_number=1,
                     action="Do something specific here",
                     expected_result="Something happens as expected",
@@ -101,12 +104,12 @@ class TestLintEngine:
 
     def test_lint_generic_title(self, lint_engine):
         """Test that generic titles are flagged."""
-        tc = TestCase(
+        tc = QaTestCase(
             title="Test the login functionality",  # Starts with "Test"
             description="This is a proper description with enough detail about the test.",
             preconditions=["System is ready for testing"],
             steps=[
-                TestStep(
+                QaTestStep(
                     step_number=1,
                     action="Perform the test action here",
                     expected_result="Expected result is observed correctly",
@@ -129,12 +132,12 @@ class TestLintEngine:
 
     def test_lint_vague_expected_results(self, lint_engine):
         """Test that vague expected results generate info."""
-        tc = TestCase(
+        tc = QaTestCase(
             title="Test with vague expected results",
             description="This test has vague expected results in steps.",
             preconditions=["System is ready to test"],
             steps=[
-                TestStep(
+                QaTestStep(
                     step_number=1,
                     action="Click the submit button on the form",
                     expected_result="Works correctly",

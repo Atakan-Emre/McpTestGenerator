@@ -4,6 +4,7 @@ QA-MCP Server - Main Entry Point.
 MCP server for test case generation, quality control, and Xray integration.
 """
 
+import argparse
 import asyncio
 import json
 import logging
@@ -23,6 +24,7 @@ from mcp.types import (
     Tool,
 )
 
+from qa_mcp import __version__
 from qa_mcp.prompts.templates import PROMPT_REGISTRY
 from qa_mcp.resources.standards import (
     get_bad_examples,
@@ -592,7 +594,18 @@ async def get_prompt(name: str, arguments: dict[str, str] | None = None) -> GetP
 
 def main() -> None:
     """Main entry point for the QA-MCP server."""
-    logger.info("Starting QA-MCP Server v1.0.0")
+    parser = argparse.ArgumentParser(
+        prog="qa-mcp",
+        description="QA-MCP server (Model Context Protocol) for test case generation and QA tooling.",
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
+    )
+    parser.parse_args()
+
+    logger.info(f"Starting QA-MCP Server v{__version__}")
     logger.info(f"Log level: {LOG_LEVEL}")
     logger.info(f"Write tools enabled: {ENABLE_WRITE_TOOLS}")
     logger.info(f"Audit logging enabled: {AUDIT_LOG_ENABLED}")

@@ -11,7 +11,7 @@ on:
 
 env:
   REGISTRY: docker.io
-  IMAGE_NAME: atakanemre/qa-mcp
+  IMAGE_NAME: atakanemree/qa-mcp
 
 jobs:
   # ==========================================================================
@@ -51,7 +51,11 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
             # Latest tag for newest release
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
 
       - name: Build and push multi-arch image
         uses: docker/build-push-action@v5
@@ -70,7 +74,7 @@ jobs:
       - name: Generate SBOM
         uses: anchore/sbom-action@v0
         with:
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION }}
           format: spdx-json
           output-file: sbom.spdx.json
 
@@ -110,7 +114,7 @@ jobs:
             
             ### Docker Image
             ```bash
-            docker pull qamcp/qa-mcp:${{ steps.version.outputs.VERSION }}
+            docker pull atakanemree/qa-mcp:${{ steps.version.outputs.VERSION }}
             ```
             
             ### Multi-arch Support
@@ -126,5 +130,4 @@ jobs:
           files: |
             sbom.spdx.json
           generate_release_notes: true
-
 

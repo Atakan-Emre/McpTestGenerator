@@ -62,12 +62,12 @@ jobs:
           context: .
           push: false
           load: true
-          tags: qamcp/qa-mcp:scan
+          tags: atakanemree/qa-mcp:scan
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: 'qamcp/qa-mcp:scan'
+          image-ref: 'atakanemree/qa-mcp:scan'
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'

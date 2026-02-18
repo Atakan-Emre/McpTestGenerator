@@ -162,13 +162,12 @@ def _select_testcases(
             include = False
             reason.append(f"Maksimum test sayısına ulaşıldı ({max_tests})")
 
-        # Check labels
+        # Labels should reinforce valid candidates, not bypass hard constraints.
         if suite_type == SuiteType.SMOKE and "smoke" in tc.labels:
-            include = True
-            reason = ["'smoke' label'ı mevcut"]
-        elif suite_type == SuiteType.REGRESSION and "regression" in tc.labels:
-            include = True
-            reason = ["'regression' label'ı mevcut"]
+            if include:
+                reason.append("'smoke' label'ı mevcut")
+        elif suite_type == SuiteType.REGRESSION and "regression" in tc.labels and include:
+            reason.append("'regression' label'ı mevcut")
 
         # Record decision
         if include:

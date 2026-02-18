@@ -1,11 +1,10 @@
 """Tests for MCP tools."""
 
-import pytest
+from qa_mcp.tools.compose import compose_suite, coverage_report
 from qa_mcp.tools.generate import generate_testcase
-from qa_mcp.tools.lint import lint_testcase, lint_batch
+from qa_mcp.tools.lint import lint_batch, lint_testcase
 from qa_mcp.tools.normalize import normalize_testcase
 from qa_mcp.tools.to_xray import convert_to_xray
-from qa_mcp.tools.compose import compose_suite, coverage_report
 
 
 class TestGenerateTool:
@@ -238,6 +237,52 @@ class TestComposeTool:
         assert result["suite"] is not None
         # Smoke should prioritize critical tests
         assert "TC-001" in result["suite"]["testcases"]
+
+    def test_compose_smoke_label_does_not_bypass_filters(self):
+        """Smoke labels must not bypass priority/risk/duration filters."""
+        testcases = [
+            {
+                "id": "TC-001",
+                "title": "Critical smoke test candidate",
+                "description": "Valid critical test description for smoke suite selection behavior.",
+                "preconditions": ["System is ready for testing"],
+                "steps": [
+                    {
+                        "step_number": 1,
+                        "action": "Execute critical workflow path",
+                        "expected_result": "Critical workflow succeeds",
+                    }
+                ],
+                "expected_result": "Critical flow works successfully",
+                "risk_level": "critical",
+                "priority": "P0",
+                "estimated_duration_minutes": 5,
+            },
+            {
+                "id": "TC-002",
+                "title": "Low priority testcase with smoke label",
+                "description": "Low-priority test should not be force-selected by label alone.",
+                "preconditions": ["System is ready for testing"],
+                "steps": [
+                    {
+                        "step_number": 1,
+                        "action": "Execute non-critical workflow path",
+                        "expected_result": "Non-critical workflow succeeds",
+                    }
+                ],
+                "expected_result": "Non-critical flow works successfully",
+                "risk_level": "low",
+                "priority": "P3",
+                "labels": ["smoke"],
+                "estimated_duration_minutes": 20,
+            },
+        ]
+
+        result = compose_suite(testcases, target="smoke", max_duration_minutes=15)
+        selected = result["suite"]["testcases"]
+
+        assert "TC-001" in selected
+        assert "TC-002" not in selected
 
     def test_coverage_report(self):
         """Test coverage report generation."""
