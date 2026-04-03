@@ -344,7 +344,7 @@ def get_good_examples() -> list[dict[str, Any]]:
     """
     Get good test case examples.
 
-    URI: qa://examples/good/*
+    URI: qa://examples/good
     """
     return [
         {
@@ -470,7 +470,7 @@ def get_bad_examples() -> list[dict[str, Any]]:
     """
     Get bad test case examples (anti-patterns).
 
-    URI: qa://examples/bad/*
+    URI: qa://examples/bad
     """
     return [
         {

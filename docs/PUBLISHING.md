@@ -1,209 +1,170 @@
-# Publishing QA-MCP to PyPI
+# Publishing QA-MCP
 
-This guide explains how to publish the `qa-mcp` package to PyPI (Python Package Index).
+This document describes the release process for the `qa-mcp` Python package and the companion Docker image.
 
-## 📋 Prerequisites
+## Release Model
 
-### 1. PyPI Account Setup
+QA-MCP uses a tag-driven release flow.
 
-1. **Create PyPI account**: https://pypi.org/account/register/
-2. **Create Test PyPI account**: https://test.pypi.org/account/register/
-3. **Enable 2FA** (highly recommended for security)
+Pushing a semantic version tag such as `v1.0.3` triggers:
 
-### 2. API Tokens
+- Docker image build and publish to Docker Hub
+- GitHub release creation
+- PyPI package build and publish
 
-1. **PyPI API Token**:
-   - Go to: https://pypi.org/manage/account/token/
-   - Create new token with scope: "Entire account" or specific to `qa-mcp`
-   - **Save the token** - you won't see it again!
+The release source of truth is the Git tag.
 
-2. **Test PyPI API Token**:
-   - Go to: https://test.pypi.org/manage/account/token/
-   - Create new token
-   - Save the token
+## Required Secrets
 
-### 3. GitHub Secrets
+Repository Actions secrets must contain:
 
-Add the tokens to your GitHub repository secrets:
+- `PYPI_API_TOKEN`
+- `DOCKERHUB_USERNAME`
+- `DOCKERHUB_TOKEN`
 
-1. Go to: `Settings` → `Secrets and variables` → `Actions`
-2. Add two secrets:
-   - `PYPI_API_TOKEN` - Your production PyPI token
-   - `TEST_PYPI_API_TOKEN` - Your Test PyPI token
+Without these, release workflows will fail.
 
-## 🧪 Testing Release (Test PyPI)
+## Standard Release Procedure
 
-Before publishing to production PyPI, test with Test PyPI:
+### 1. Update versioned files
 
-### Manual Test
+At minimum, align the version across:
 
-```bash
-# 1. Build the package
-python -m pip install --upgrade build twine
-python -m build
+- `pyproject.toml`
+- `src/qa_mcp/__init__.py`
+- `Dockerfile`
+- `docker-compose.yml` if image defaults are version-pinned
+- `CHANGELOG.md`
+- any release-oriented documentation that explicitly mentions the current stable version
 
-# 2. Check the built package
-twine check dist/*
+Example:
 
-# 3. Upload to Test PyPI
-twine upload --repository testpypi dist/*
-# Enter __token__ as username
-# Paste your TEST_PYPI_API_TOKEN as password
-
-# 4. Test installation
-pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ qa-mcp
-
-# 5. Test it works
-qa-mcp --help
+```toml
+version = "1.0.3"
 ```
 
-### Automated Test (GitHub Actions)
+### 2. Verify the package locally
 
 ```bash
-# Trigger manual workflow
-# Go to: Actions → "Publish to PyPI" → "Run workflow"
-# This will publish to Test PyPI
+uv run --extra dev pytest -q
+uv run --extra dev ruff check .
+uv run --extra dev mypy src
+uv run qa-mcp --version
+docker build -t qa-mcp:1.0.3 .
+docker run --rm qa-mcp:1.0.3 --version
 ```
 
-## 🚀 Production Release
-
-### Option 1: Automated Release (Recommended)
-
-When you create a GitHub release, the package is automatically published:
-
-1. **Update version** in `pyproject.toml`
-   ```toml
-   version = "1.0.2"  # or whatever the next version is
-   ```
-
-2. **Update CHANGELOG.md**
-   ```markdown
-   ## [1.0.2] - 2026-04-03
-   
-   ### Added
-   - New feature...
-   
-   ### Fixed
-   - Bug fix...
-   ```
-
-3. **Commit and push**
-   ```bash
-   git add pyproject.toml CHANGELOG.md
-   git commit -m "chore: bump version to 1.0.2"
-   git push origin main
-   ```
-
-4. **Create GitHub Release**
-   - Go to: https://github.com/Atakan-Emre/McpTestGenerator/releases
-   - Click "Create a new release"
-   - Click "Choose a tag" → type `v1.0.2` → "Create new tag on publish"
-   - Release title: `v1.0.2`
-   - Use the template from `.github/RELEASE_TEMPLATE.md`
-   - Click "Publish release"
-
-5. **Wait for workflow**
-   - Go to: Actions → "Publish to PyPI"
-   - Watch the workflow run
-   - If successful, package is now on PyPI!
-
-6. **Verify**
-   ```bash
-   pip install --upgrade qa-mcp
-   qa-mcp --help
-   ```
-
-### Option 2: Manual Release
+### 3. Commit and push `main`
 
 ```bash
-# 1. Clean previous builds
-rm -rf dist/ build/ *.egg-info
-
-# 2. Build
-python -m build
-
-# 3. Check
-twine check dist/*
-
-# 4. Upload to PyPI
-twine upload dist/*
-# Enter __token__ as username
-# Paste your PYPI_API_TOKEN as password
-
-# 5. Verify
-pip install --upgrade qa-mcp
-qa-mcp --help
+git add .
+git commit -m "chore: prepare 1.0.3 release"
+git push origin main
 ```
 
-## 📝 Version Numbering
+### 4. Create and push the release tag
 
-Follow [Semantic Versioning](https://semver.org/):
+```bash
+git tag -a v1.0.3 -m "QA-MCP v1.0.3"
+git push origin v1.0.3
+```
 
-- **MAJOR** (1.x.x): Breaking changes
-- **MINOR** (x.1.x): New features, backward-compatible
-- **PATCH** (x.x.1): Bug fixes, backward-compatible
+That tag push is what starts the release automation.
 
-Examples:
-- `1.0.0` → `1.0.1` - Bug fix
-- `1.0.1` → `1.1.0` - New feature
-- `1.1.0` → `2.0.0` - Breaking change
+## What the Workflows Do
 
-## 🔍 Verification Checklist
+### Release workflow
 
-After publishing, verify:
+Triggered by:
 
-- [ ] Package appears on PyPI: https://pypi.org/project/qa-mcp/
-- [ ] README renders correctly on PyPI
-- [ ] Installation works: `pip install qa-mcp`
-- [ ] Command works: `qa-mcp --help`
-- [ ] Docker image updated: `docker pull atakanemree/qa-mcp:latest`
-- [ ] Badges work on README
+- `push` on tags matching `v*.*.*`
 
-## ⚠️ Troubleshooting
+Responsibilities:
 
-### "File already exists"
+- Build and push multi-arch Docker images
+- Publish semver Docker tags such as `1.0.3`, `1.0`, `1`, and `latest`
+- Create the GitHub release page
 
-PyPI doesn't allow re-uploading the same version. Solutions:
-1. Increment version number
-2. Use `--skip-existing` flag (for re-uploading other files in same release)
+### Publish to PyPI workflow
 
-### "Invalid distribution"
+Triggered by:
 
-Check:
-- `pyproject.toml` syntax is valid
-- All required fields are present
-- Version format is correct
+- `push` on tags matching `v*.*.*`
+- `release.published`
+- `workflow_dispatch`
 
-### "Authentication failed"
+Responsibilities:
 
-- Verify token is correct
-- Use `__token__` as username (not your PyPI username)
-- Check token hasn't expired
-- Verify token has correct permissions
+- Build the Python package
+- Upload to PyPI with `twine upload --skip-existing`
+- Allow safe re-runs for already-published versions
 
-## 📚 Resources
+## Verification Checklist
+
+After pushing the version tag, verify:
+
+- GitHub release exists for the tag
+- PyPI shows the new package version
+- Docker Hub shows the new version tag
+- `latest` on Docker Hub points to the newest stable release
+- `pip install qa-mcp==<version>` works
+- `docker run --rm atakanemree/qa-mcp:<version> --version` works
+
+Useful endpoints:
 
 - PyPI: https://pypi.org/project/qa-mcp/
-- Test PyPI: https://test.pypi.org/project/qa-mcp/
-- Python Packaging Guide: https://packaging.python.org/
-- Twine Documentation: https://twine.readthedocs.io/
+- Docker Hub: https://hub.docker.com/r/atakanemree/qa-mcp/tags
+- Releases: https://github.com/Atakan-Emre/McpTestGenerator/releases
+- Actions: https://github.com/Atakan-Emre/McpTestGenerator/actions
 
-## 🎯 Quick Reference
+## Recovery Paths
+
+### PyPI publish failed but artifacts are correct
+
+Re-run the `Publish to PyPI` workflow from GitHub Actions.
+Because the workflow uses `--skip-existing`, re-running is safe for already-uploaded files.
+
+### Docker publish failed
+
+Re-run the `Release` workflow run for the tag if the failure is transient.
+If the tag points to the wrong commit, delete the tag locally and remotely, recreate it, and push again.
+
+### Wrong version was tagged
+
+If the tag has not been consumed externally yet:
 
 ```bash
-# Development build and test
-python -m build
-twine check dist/*
-
-# Test PyPI
-twine upload --repository testpypi dist/*
-
-# Production PyPI
-twine upload dist/*
-
-# Install from Test PyPI
-pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ qa-mcp
-
-# Install from PyPI
-pip install qa-mcp
+git tag -d v1.0.3
+git push origin :refs/tags/v1.0.3
 ```
+
+Then fix the versioned files, recommit if necessary, recreate the tag, and push again.
+
+If PyPI has already accepted the version, do not reuse the same version number. Increment the package version.
+
+## Manual Fallback: PyPI Only
+
+If GitHub Actions cannot be used, publish manually:
+
+```bash
+rm -rf dist build *.egg-info
+uv run python -m pip install --upgrade build twine
+uv run python -m build
+uv run twine check dist/*
+uv run twine upload dist/*
+```
+
+Then verify:
+
+```bash
+pip install --upgrade qa-mcp
+qa-mcp --version
+```
+
+## Versioning Policy
+
+QA-MCP follows Semantic Versioning:
+
+- `MAJOR`: breaking changes
+- `MINOR`: backward-compatible feature additions
+- `PATCH`: backward-compatible fixes and documentation corrections

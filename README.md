@@ -1,4 +1,4 @@
-# QA-MCP: Test Standardization & Orchestration Server
+# QA-MCP
 
 <div align="center">
 
@@ -6,90 +6,66 @@
 [![PyPI version](https://img.shields.io/pypi/v/qa-mcp.svg)](https://pypi.org/project/qa-mcp/)
 [![Python](https://img.shields.io/pypi/pyversions/qa-mcp.svg)](https://pypi.org/project/qa-mcp/)
 [![License](https://img.shields.io/badge/license-MIT-orange.svg)](LICENSE)
-[![MCP](https://img.shields.io/badge/MCP-compatible-purple.svg)](https://modelcontextprotocol.io/)
 [![Docker](https://img.shields.io/docker/pulls/atakanemree/qa-mcp.svg)](https://hub.docker.com/r/atakanemree/qa-mcp)
 
-**🇬🇧 English** | [🇹🇷 Türkçe](#-türkçe)
+**🇬🇧 English** | [**🇹🇷 Türkçe**](#-türkçe)
 
 </div>
+
+QA-MCP is a Model Context Protocol server for structured QA work. It gives MCP clients a shared test case model, quality analysis, normalization utilities, Xray export payloads, and suite composition tools so test artifacts stay consistent across teams and projects.
 
 ---
 
 # 🇬🇧 English
 
-**An MCP server that enables LLM clients to perform standardized test case generation, quality control, Xray format conversion, and test suite composition.**
+## Overview
 
-## 🎯 Problem
+QA-MCP is designed for teams that want deterministic, reusable test artifacts instead of ad-hoc prompts and inconsistent manual QA documents.
 
-Common issues in enterprise QA:
+It currently focuses on:
 
-- **Inconsistent test case formats**: Different people write in different formats → not reusable
-- **No standard in Xray/Jira**: Missing fields, unclear datasets, ambiguous steps
-- **Smoke/Regression distinction** depends on individuals: Sprint-based planning is difficult
-- **When writing tests with LLM**, same suggestions return or critical negative scenarios are missed
+- Standardized test case generation from feature descriptions and acceptance criteria
+- Linting and improvement guidance against a shared QA schema
+- Normalization from Gherkin, Markdown, JSON, and plain text into the QA-MCP model
+- Xray-compatible JSON payload generation
+- Smoke, sanity, regression, and E2E suite composition
+- Coverage reporting for requirements and modules
+- MCP resources and prompt templates for repeatable LLM usage
 
-## ✨ Solution
+## Current Runtime Model
 
-QA-MCP provides:
+- Transport: `stdio` only
+- Network listeners: not enabled in the current release
+- Write-capable Jira/Xray sync: not exposed in the current release
+- Audit logging: available and enabled by default
 
-- ✅ **Single test standard**: Everyone produces/improves with the same template
-- ✅ **Quality gate**: Lint score + missing field detection
-- ✅ **Xray compatible output**: Importable JSON
-- ✅ **Test suite/plan composition**: Smoke/Regression/E2E suggestions + tagging
-- ✅ **Secure container deployment**: Runnable from Docker Hub
+If you need an HTTP server or direct Jira/Xray synchronization, treat those as future integration work rather than currently shipped features.
 
-## 📦 Installation
+## Quick Start
 
-### With uv (recommended)
-
-```bash
-# Install uv package manager
-pip install uv
-
-# Install qa-mcp
-uv pip install qa-mcp
-```
-
-### With pip
+### Install from PyPI
 
 ```bash
 pip install qa-mcp
-qa-mcp --help
 qa-mcp --version
 ```
 
-PyPI publishing rule:
-- `pip install qa-mcp` becomes available after a successful `Publish to PyPI` workflow run.
-- Manual publish: GitHub `Actions` -> `Publish to PyPI` -> `Run workflow`.
-- Required GitHub secret: `PYPI_API_TOKEN` for [pypi.org](https://pypi.org/).
-
-### From source
+### Install with uv
 
 ```bash
-git clone https://github.com/Atakan-Emre/McpTestGenerator.git
-cd McpTestGenerator
-
-# Using uv (recommended - uses locked dependencies)
-uv pip install -e .
-
-# Using pip
-pip install -e .
+pip install uv
+uv pip install qa-mcp
+qa-mcp --version
 ```
 
-### With Docker
+### Run with Docker
 
 ```bash
 docker pull atakanemree/qa-mcp:latest
-docker run -i atakanemree/qa-mcp:latest
+docker run -i --rm atakanemree/qa-mcp:latest
 ```
 
-## 🚀 Usage
-
-### MCP Client Connection
-
-#### Cursor / Claude Desktop
-
-Add to your `mcp.json` or `claude_desktop_config.json`:
+### Connect an MCP client
 
 ```json
 {
@@ -102,7 +78,7 @@ Add to your `mcp.json` or `claude_desktop_config.json`:
 }
 ```
 
-#### With Docker
+Docker-based MCP client configuration:
 
 ```json
 {
@@ -115,155 +91,158 @@ Add to your `mcp.json` or `claude_desktop_config.json`:
 }
 ```
 
-## 🔧 Tools
+## Public MCP Surface
 
-| Tool | Description |
-|------|-------------|
-| `testcase.generate` | Generate standardized test cases from feature & acceptance criteria |
-| `testcase.lint` | Analyze test case quality, return score and improvement suggestions |
-| `testcase.normalize` | Convert Gherkin/Markdown → Standard format |
-| `testcase.to_xray` | Export to Xray/Jira import format |
-| `suite.compose` | Create Smoke/Regression/E2E test suites |
-| `suite.coverage_report` | Generate test coverage analysis |
+### Tools
 
-## 📚 Resources
+| Tool | Purpose |
+|------|---------|
+| `testcase.generate` | Generate standardized test cases from feature text and acceptance criteria |
+| `testcase.lint` | Analyze a single test case and return score, issues, and improvement guidance |
+| `testcase.lint_batch` | Analyze a collection of test cases and return aggregate findings |
+| `testcase.normalize` | Normalize Gherkin, Markdown, JSON, or plain text into the QA-MCP schema |
+| `testcase.to_xray` | Convert a single standardized test case into Xray-compatible JSON payload |
+| `testcase.to_xray_batch` | Convert multiple test cases into Xray-compatible bulk payloads |
+| `suite.compose` | Select and compose smoke, sanity, regression, or E2E suites |
+| `suite.coverage_report` | Report requirement, module, risk, and scenario coverage |
+| `xray.get_mapping_template` | Return the suggested QA-MCP to Xray field mapping template |
 
-| URI | Description |
-|-----|-------------|
-| `qa://standards/testcase/v1` | Test case standard |
-| `qa://checklists/lint-rules/v1` | Lint rules |
-| `qa://mappings/xray/v1` | Xray field mapping |
-| `qa://examples/good/*` | Good test case examples |
-| `qa://examples/bad/*` | Bad test case examples |
+### Resources
 
-## 💬 Prompts
+| URI | Purpose |
+|-----|---------|
+| `qa://standards/testcase/v1` | Canonical QA-MCP test case standard |
+| `qa://checklists/lint-rules/v1` | Lint rules, penalties, and scoring guidance |
+| `qa://mappings/xray/v1` | Xray mapping reference |
+| `qa://examples/good` | Good example test cases |
+| `qa://examples/bad` | Anti-pattern example test cases |
 
-| Prompt | Description |
-|--------|-------------|
-| `create-manual-test` | Create Xray Manual Test |
-| `select-smoke-tests` | Smoke test selection |
-| `generate-negative-scenarios` | Generate negative scenarios |
-| `review-test-coverage` | Test coverage analysis |
+### Prompts
 
-## 🐳 Docker
+| Prompt | Purpose |
+|--------|---------|
+| `create-manual-test` | Guide an LLM toward structured manual test creation |
+| `select-smoke-tests` | Guide smoke suite selection from an existing pool |
+| `generate-negative-scenarios` | Guide negative scenario generation |
+| `review-test-coverage` | Guide coverage review against existing test assets |
 
-Published image: `atakanemree/qa-mcp` (multi-arch: `linux/amd64`, `linux/arm64`)
+## Configuration
+
+Effective runtime settings in the current release:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LOG_LEVEL` | `info` | Standard application log level |
+| `AUDIT_LOG_ENABLED` | `true` | Enables tool invocation audit logging |
+
+Notes:
+
+- `qa-mcp` currently runs in `stdio` mode.
+- Container images may include placeholder environment variables for future transports or integrations, but they are not active features unless the server implementation actually uses them.
+
+## Docker
+
+Published image: `atakanemree/qa-mcp`
 
 ```bash
-# Pull image
+# Pull
 docker pull atakanemree/qa-mcp:latest
 
-# Verify CLI
-docker run --rm atakanemree/qa-mcp:latest --help
+# Verify the packaged CLI
+docker run --rm atakanemree/qa-mcp:latest --version
 
-# Run (stdio mode - default, most secure)
+# Run the MCP server in stdio mode
 docker run -i --rm atakanemree/qa-mcp:latest
 
-# With environment variables
-docker run -i --rm \
-  -e LOG_LEVEL=debug \
-  -e ENABLE_WRITE_TOOLS=false \
-  atakanemree/qa-mcp:latest
-
-# Local compose (production and dev targets)
+# Compose targets
 docker compose up qa-mcp
 docker compose --profile dev up qa-mcp-dev
 ```
 
-## 🔒 Security
+## Documentation
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `ENABLE_WRITE_TOOLS` | `false` | Enables Jira/Xray write tools |
-| `LOG_LEVEL` | `info` | Log level (`debug`, `info`, `warning`, `error`) |
-| `AUDIT_LOG_ENABLED` | `true` | Enables audit logging |
-| `HTTP_ENABLED` | `false` | Enables HTTP transport |
-| `HTTP_PORT` | `8080` | HTTP port |
+- [USAGE.md](USAGE.md): Detailed usage examples and request payloads
+- [CONTRIBUTING.md](CONTRIBUTING.md): Contributor workflow and quality checks
+- [docs/PUBLISHING.md](docs/PUBLISHING.md): Package and release publishing flow
+- [CHANGELOG.md](CHANGELOG.md): Release history
+- [DOCKERHUB.md](DOCKERHUB.md): Docker Hub description source
 
-## 🗺️ Roadmap
+## Roadmap
 
-- [x] **v1.0** - MVP: generate, lint, to_xray, compose
-- [ ] **v1.1** - Policy/guardrails, audit logs
-- [ ] **v1.2** - Jira/Xray sync (read-only)
-- [ ] **v2.0** - HTTP transport, OAuth
+### Shipped
+
+- Standard test case schema and resources
+- Generation, linting, normalization, Xray export, suite composition, and coverage reporting
+- Prompt templates for structured QA workflows
+- PyPI packaging, Docker image publishing, and audit logging
+
+### Near-Term Focus
+
+- Better normalization coverage for messy real-world inputs
+- Stronger example libraries and schema-oriented documentation
+- Clearer suite selection rationale and coverage reporting ergonomics
+
+### Planned Integrations
+
+- Read-only integrations for external QA systems where they materially improve traceability
+- Carefully gated write-capable integrations only when the operational model is explicit and safe
+
+## License
+
+MIT License. See [LICENSE](LICENSE).
 
 ---
 
 # 🇹🇷 Türkçe
 
-**LLM istemcilerinin bağlanıp standart test case üretme, kalite kontrol, Xray formatına çevirme ve test set kompozisyonu yapabildiği bir MCP sunucusu.**
+## Genel Bakış
 
-## 🎯 Problem
+QA-MCP, yapılandırılmış QA iş akışları için hazırlanmış bir Model Context Protocol sunucusudur. MCP istemcilerine ortak bir test case modeli, kalite analizi, normalizasyon araçları, Xray çıktı payload'ları ve suite kompozisyon araçları sağlar.
 
-Kurumsal QA'da tipik sorunlar:
+Bugünkü kapsamı:
 
-- **Test case formatı dağınık**: Farklı kişiler farklı biçimde yazar → tekrar kullanılamaz
-- **Xray/Jira'da standard yok**: Alanlar eksik, dataset belirsiz, adımlar muğlak
-- **Smoke/Regression ayrımı** kişiye bağlı: Sprint bazlı planlama zor
-- **LLM ile test yazdırınca** aynı öneriler dönüyor veya kritik negatif senaryolar kaçıyor
+- Feature açıklamaları ve acceptance criteria üzerinden standart test case üretimi
+- Ortak QA şemasına göre lint analizi ve iyileştirme yönlendirmesi
+- Gherkin, Markdown, JSON ve düz metni QA-MCP modeline dönüştürme
+- Xray uyumlu JSON payload üretimi
+- Smoke, sanity, regression ve E2E suite kompozisyonu
+- Requirement ve modül bazlı coverage raporlama
+- Tekrarlanabilir LLM kullanımı için MCP resource ve prompt şablonları
 
-## ✨ Çözüm
+## Mevcut Çalışma Modeli
 
-QA-MCP şunları sağlar:
+- Transport: yalnızca `stdio`
+- Ağ dinleyicisi: mevcut sürümde yok
+- Yazma yetkili Jira/Xray senkronizasyonu: mevcut sürümde yok
+- Audit logging: mevcut ve varsayılan olarak açık
 
-- ✅ **Tek test standardı**: Herkes aynı şablonla üretir/iyileştirir
-- ✅ **Kalite kapısı (quality gate)**: Lint skoru + eksik alan tespiti
-- ✅ **Xray uyumlu çıktı**: Import edilebilir JSON
-- ✅ **Test set/plan kompozisyonu**: Smoke/Regression/E2E önerisi + etiketleme
-- ✅ **Güvenli container dağıtımı**: Docker Hub'dan çalıştırılabilir
+HTTP sunucusu veya doğrudan Jira/Xray senkronizasyonu gerekiyorsa, bunları mevcut özellik değil gelecek entegrasyon işi olarak değerlendirin.
 
-## 📦 Kurulum
+## Hızlı Başlangıç
 
-### uv ile (önerilen)
-
-```bash
-# uv paket yöneticisini kur
-pip install uv
-
-# qa-mcp'yi kur
-uv pip install qa-mcp
-```
-
-### pip ile
+### PyPI üzerinden kurulum
 
 ```bash
 pip install qa-mcp
-qa-mcp --help
 qa-mcp --version
 ```
 
-PyPI yayın kuralı:
-- `pip install qa-mcp`, `Publish to PyPI` workflow'u başarılı tamamlandığında kullanılabilir olur.
-- Manuel yayın: GitHub `Actions` -> `Publish to PyPI` -> `Run workflow`.
-- Gerekli GitHub secret'ı: [pypi.org](https://pypi.org/) için `PYPI_API_TOKEN`.
-
-### Kaynak koddan
+### uv ile kurulum
 
 ```bash
-git clone https://github.com/Atakan-Emre/McpTestGenerator.git
-cd McpTestGenerator
-
-# uv ile (önerilen - kilitli bağımlılıkları kullanır)
-uv pip install -e .
-
-# pip ile
-pip install -e .
+pip install uv
+uv pip install qa-mcp
+qa-mcp --version
 ```
 
-### Docker ile
+### Docker ile çalıştırma
 
 ```bash
 docker pull atakanemree/qa-mcp:latest
-docker run -i atakanemree/qa-mcp:latest
+docker run -i --rm atakanemree/qa-mcp:latest
 ```
 
-## 🚀 Kullanım
-
-### MCP İstemcisi ile Bağlantı
-
-#### Cursor / Claude Desktop
-
-`mcp.json` veya `claude_desktop_config.json` dosyasına ekleyin:
+### MCP istemcisine bağlama
 
 ```json
 {
@@ -276,7 +255,7 @@ docker run -i atakanemree/qa-mcp:latest
 }
 ```
 
-#### Docker ile
+Docker tabanlı istemci yapılandırması:
 
 ```json
 {
@@ -289,118 +268,102 @@ docker run -i atakanemree/qa-mcp:latest
 }
 ```
 
-## 🔧 Tools
+## Public MCP Yüzeyi
 
-| Tool | Açıklama |
-|------|----------|
-| `testcase.generate` | Feature ve acceptance criteria'dan standart test case üretir |
-| `testcase.lint` | Test case kalitesini analiz eder, skor ve öneriler döner |
-| `testcase.normalize` | Gherkin/Markdown → Standart format dönüşümü |
-| `testcase.to_xray` | Xray/Jira import formatına çevirir |
-| `suite.compose` | Smoke/Regression/E2E test suite oluşturur |
-| `suite.coverage_report` | Test kapsam analizi raporu üretir |
+### Tool'lar
 
-## 📚 Resources
+| Tool | Amaç |
+|------|------|
+| `testcase.generate` | Feature metni ve acceptance criteria'dan standart test case üretir |
+| `testcase.lint` | Tek bir test case için skor, issue ve iyileştirme önerileri döner |
+| `testcase.lint_batch` | Birden fazla test case için toplu kalite analizi yapar |
+| `testcase.normalize` | Gherkin, Markdown, JSON veya düz metni QA-MCP şemasına dönüştürür |
+| `testcase.to_xray` | Tek bir test case'i Xray uyumlu JSON payload'a çevirir |
+| `testcase.to_xray_batch` | Birden fazla test case'i toplu Xray payload formatına çevirir |
+| `suite.compose` | Smoke, sanity, regression veya E2E suite seçimi yapar |
+| `suite.coverage_report` | Requirement, modül, risk ve senaryo kapsamını raporlar |
+| `xray.get_mapping_template` | QA-MCP → Xray alan eşleme şablonunu döner |
 
-| URI | Açıklama |
-|-----|----------|
-| `qa://standards/testcase/v1` | Test case standardı |
-| `qa://checklists/lint-rules/v1` | Lint kuralları |
-| `qa://mappings/xray/v1` | Xray alan eşlemesi |
-| `qa://examples/good/*` | İyi test case örnekleri |
-| `qa://examples/bad/*` | Kötü test case örnekleri |
+### Resource'lar
 
-## 💬 Prompts
+| URI | Amaç |
+|-----|------|
+| `qa://standards/testcase/v1` | Kanonik QA-MCP test case standardı |
+| `qa://checklists/lint-rules/v1` | Lint kuralları, cezalar ve puanlama mantığı |
+| `qa://mappings/xray/v1` | Xray mapping referansı |
+| `qa://examples/good` | İyi örnek test case'ler |
+| `qa://examples/bad` | Anti-pattern örnek test case'ler |
 
-| Prompt | Açıklama |
-|--------|----------|
-| `create-manual-test` | Xray Manual Test oluşturma |
-| `select-smoke-tests` | Smoke test seçimi |
-| `generate-negative-scenarios` | Negatif senaryo üretimi |
-| `review-test-coverage` | Test kapsam analizi |
+### Prompt'lar
 
-## 🐳 Docker
+| Prompt | Amaç |
+|--------|------|
+| `create-manual-test` | LLM'i yapılandırılmış manual test üretimine yönlendirir |
+| `select-smoke-tests` | Mevcut havuzdan smoke suite seçimine yönlendirir |
+| `generate-negative-scenarios` | Negatif senaryo üretimine yönlendirir |
+| `review-test-coverage` | Mevcut test varlıkları üzerinden kapsam analizine yönlendirir |
 
-Yayınlanan image: `atakanemree/qa-mcp` (multi-arch: `linux/amd64`, `linux/arm64`)
+## Yapılandırma
+
+Mevcut sürümde etkili olan runtime ayarları:
+
+| Değişken | Varsayılan | Açıklama |
+|----------|------------|----------|
+| `LOG_LEVEL` | `info` | Uygulama log seviyesi |
+| `AUDIT_LOG_ENABLED` | `true` | Tool çağrıları için audit log'u açar |
+
+Notlar:
+
+- `qa-mcp` şu anda yalnızca `stdio` modunda çalışır.
+- Container image içinde gelecekteki transport veya entegrasyonlara ait placeholder environment variable'lar bulunabilir; sunucu implementasyonu bunları kullanmadıkça aktif özellik sayılmamalıdır.
+
+## Docker
+
+Yayınlanan image: `atakanemree/qa-mcp`
 
 ```bash
-# Image çekme
+# Çek
 docker pull atakanemree/qa-mcp:latest
 
-# CLI doğrulama
-docker run --rm atakanemree/qa-mcp:latest --help
+# Paketlenmiş CLI'yı doğrula
+docker run --rm atakanemree/qa-mcp:latest --version
 
-# Çalıştırma (stdio mode - varsayılan, en güvenli)
+# MCP server'ı stdio modunda çalıştır
 docker run -i --rm atakanemree/qa-mcp:latest
 
-# Environment variables ile
-docker run -i --rm \
-  -e LOG_LEVEL=debug \
-  -e ENABLE_WRITE_TOOLS=false \
-  atakanemree/qa-mcp:latest
-
-# Local compose (production ve dev target'ları)
+# Compose target'ları
 docker compose up qa-mcp
 docker compose --profile dev up qa-mcp-dev
 ```
 
-## 🔒 Güvenlik
+## Dokümantasyon
 
-| Değişken | Varsayılan | Açıklama |
-|----------|------------|----------|
-| `ENABLE_WRITE_TOOLS` | `false` | Jira/Xray yazma tool'larını etkinleştirir |
-| `LOG_LEVEL` | `info` | Log seviyesi (`debug`, `info`, `warning`, `error`) |
-| `AUDIT_LOG_ENABLED` | `true` | Audit log'u etkinleştirir |
-| `HTTP_ENABLED` | `false` | HTTP transport'u etkinleştirir |
-| `HTTP_PORT` | `8080` | HTTP port |
+- [USAGE.md](USAGE.md): Detaylı kullanım örnekleri ve request payload'ları
+- [CONTRIBUTING.md](CONTRIBUTING.md): Katkı akışı ve kalite kontrolleri
+- [docs/PUBLISHING.md](docs/PUBLISHING.md): Paket ve release yayın süreci
+- [CHANGELOG.md](CHANGELOG.md): Sürüm geçmişi
+- [DOCKERHUB.md](DOCKERHUB.md): Docker Hub açıklama kaynağı
 
-## 🗺️ Yol Haritası
+## Yol Haritası
 
-- [x] **v1.0** - MVP: generate, lint, to_xray, compose
-- [ ] **v1.1** - Policy/guardrails, audit logs
-- [ ] **v1.2** - Jira/Xray sync (read-only)
-- [ ] **v2.0** - HTTP transport, OAuth
+### Yayında Olanlar
 
----
+- Standart test case şeması ve resource seti
+- Üretim, lint, normalizasyon, Xray export, suite kompozisyonu ve coverage raporlama
+- Yapılandırılmış QA iş akışları için prompt şablonları
+- PyPI paketleme, Docker image yayını ve audit logging
 
-## 📄 License / Lisans
+### Kısa Vadeli Odak
 
-MIT License - Copyright (c) 2024-2026 [Atakan Emre](https://github.com/Atakan-Emre)
+- Gerçek dünyadaki dağınık girdiler için daha güçlü normalizasyon
+- Daha güçlü örnek kütüphaneleri ve şema odaklı dokümantasyon
+- Suite seçim gerekçesi ve coverage raporlarının kullanım ergonomisini iyileştirme
 
-## 🤝 Contributing / Katkıda Bulunma
+### Planlanan Entegrasyonlar
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details on:
+- İzlenebilirliği gerçekten artıran dış QA sistemleri için read-only entegrasyonlar
+- Ancak operasyon modeli açık ve güvenli olduğunda devreye alınacak, kontrollü write-capable entegrasyonlar
 
-- 🚀 Setting up development environment
-- 🧪 Running tests and quality checks
-- 📝 Coding standards and best practices
-- 🔄 Pull request process
+## Lisans
 
-**Quick start:**
-
-1. Fork the repository / Fork yapın
-2. Create feature branch / Feature branch oluşturun (`git checkout -b feature/amazing-feature`)
-3. Make your changes / Değişiklikleri yapın
-4. Run tests / Testleri çalıştırın (`pytest tests/ -v`)
-5. Commit your changes / Commit yapın (`git commit -m 'feat: add amazing feature'`)
-6. Push to branch / Push yapın (`git push origin feature/amazing-feature`)
-7. Open a Pull Request / Pull Request açın
-
-## 👤 Developer / Geliştirici
-
-**Atakan Emre**
-- GitHub: [@Atakan-Emre](https://github.com/Atakan-Emre)
-- Repository: [McpTestGenerator](https://github.com/Atakan-Emre/McpTestGenerator)
-
----
-
-<div align="center">
-
-**Standardize test quality with QA-MCP!** 🚀
-
-**QA-MCP ile test kalitesini standardize edin!** 🚀
-
-[![GitHub Stars](https://img.shields.io/github/stars/Atakan-Emre/McpTestGenerator?style=social)](https://github.com/Atakan-Emre/McpTestGenerator/stargazers)
-[![GitHub Forks](https://img.shields.io/github/forks/Atakan-Emre/McpTestGenerator?style=social)](https://github.com/Atakan-Emre/McpTestGenerator/network/members)
-
-</div>
+MIT License. Ayrıntılar için [LICENSE](LICENSE).

@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Documentation
 - Added PyPI publishing workflow and documentation
 - Created GitHub release template
+- Aligned core documentation with the shipped stdio-only runtime model and public MCP surface
 
 ---
 
@@ -29,6 +30,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Corrected Gherkin parsing so `And` lines after `When` remain part of the action flow
 - Fixed Xray custom field mapping for `estimated_duration_minutes`
 - Synchronized PyPI package version and Docker image metadata to `1.0.2`
+
+### Documentation
+- Rewrote README in bilingual English/Turkish format with accurate runtime, roadmap, and capability coverage
+- Updated usage, Docker, and publishing guides to match the shipped MCP surface and release flow
 
 ---
 
@@ -48,8 +53,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `qa://standards/testcase/v1` - Test case standardı
   - `qa://checklists/lint-rules/v1` - Lint kuralları
   - `qa://mappings/xray/v1` - Xray alan eşlemesi
-  - `qa://examples/good/*` - İyi test case örnekleri
-  - `qa://examples/bad/*` - Kötü test case örnekleri
+  - `qa://examples/good` - İyi test case örnekleri
+  - `qa://examples/bad` - Kötü test case örnekleri
 - **Prompts:**
   - `create-manual-test` - Manual test oluşturma şablonu
   - `select-smoke-tests` - Smoke test seçim şablonu

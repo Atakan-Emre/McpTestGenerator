@@ -224,7 +224,39 @@ Add to `~/.claude/claude_desktop_config.json`:
 }
 ```
 
-### 3. Format Conversion (`testcase.normalize`)
+### 3. Batch Lint (`testcase.lint_batch`)
+
+**Purpose:** Analyzes multiple test cases and returns aggregate quality findings.
+
+**Example Request:**
+
+```json
+{
+  "testcases": [
+    {
+      "title": "Valid login",
+      "description": "Verify successful login",
+      "preconditions": ["User account exists"],
+      "steps": [
+        {"step_number": 1, "action": "Submit valid credentials", "expected_result": "Dashboard opens"}
+      ],
+      "expected_result": "User is authenticated"
+    },
+    {
+      "title": "Login test",
+      "description": "Login test",
+      "preconditions": [],
+      "steps": [
+        {"step_number": 1, "action": "Login", "expected_result": "OK"}
+      ],
+      "expected_result": "Works"
+    }
+  ],
+  "strict_mode": true
+}
+```
+
+### 4. Format Conversion (`testcase.normalize`)
 
 **Purpose:** Converts test cases from Gherkin, Markdown, or plain text to standard format.
 
@@ -237,7 +269,7 @@ Add to `~/.claude/claude_desktop_config.json`:
 }
 ```
 
-### 4. Xray Conversion (`testcase.to_xray`)
+### 5. Xray Conversion (`testcase.to_xray`)
 
 **Purpose:** Converts standard test case to Jira/Xray import format.
 
@@ -260,7 +292,50 @@ Add to `~/.claude/claude_desktop_config.json`:
 }
 ```
 
-### 5. Suite Composition (`suite.compose`)
+### 6. Batch Xray Conversion (`testcase.to_xray_batch`)
+
+**Purpose:** Converts multiple standard test cases into Xray-compatible bulk payloads.
+
+**Example Request:**
+
+```json
+{
+  "testcases": [
+    {
+      "title": "Valid login",
+      "description": "Verify successful login",
+      "preconditions": ["User exists"],
+      "steps": [
+        {"step_number": 1, "action": "Submit valid credentials", "expected_result": "Dashboard opens"}
+      ],
+      "expected_result": "User logged in"
+    },
+    {
+      "title": "Locked account",
+      "description": "Verify blocked user behavior",
+      "preconditions": ["Locked user exists"],
+      "steps": [
+        {"step_number": 1, "action": "Submit locked account credentials", "expected_result": "Access is denied"}
+      ],
+      "expected_result": "User remains blocked"
+    }
+  ],
+  "project_key": "MYPROJ",
+  "test_type": "Manual"
+}
+```
+
+### 7. Xray Mapping Template (`xray.get_mapping_template`)
+
+**Purpose:** Returns the recommended QA-MCP to Xray custom field mapping template.
+
+**Example Request:**
+
+```json
+{}
+```
+
+### 8. Suite Composition (`suite.compose`)
 
 **Purpose:** Creates Smoke/Regression/E2E suite from test case list.
 
@@ -270,6 +345,20 @@ Add to `~/.claude/claude_desktop_config.json`:
   "target": "smoke",
   "sprint": "Sprint 15",
   "max_duration_minutes": 15
+}
+```
+
+### 9. Coverage Report (`suite.coverage_report`)
+
+**Purpose:** Reports requirement and module coverage across a test case collection.
+
+**Example Request:**
+
+```json
+{
+  "testcases": [...],
+  "requirements": ["AUTH-001", "AUTH-002", "AUTH-003"],
+  "modules": ["auth", "session"]
 }
 ```
 
@@ -305,10 +394,10 @@ Add to `~/.claude/claude_desktop_config.json`:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `LOG_LEVEL` | `info` | Log level: debug, info, warning, error |
-| `ENABLE_WRITE_TOOLS` | `false` | Enables Jira/Xray write tools |
 | `AUDIT_LOG_ENABLED` | `true` | Logs tool calls |
-| `HTTP_ENABLED` | `false` | Enables HTTP transport |
-| `HTTP_PORT` | `8080` | HTTP port number |
+| `ENABLE_WRITE_TOOLS` | `false` | Reserved flag; no extra public write tools are exposed in the current release |
+
+**Runtime note:** QA-MCP currently runs in `stdio` mode only. Container images may still define placeholder HTTP-related environment variables, but they are not active runtime features in the current release.
 
 ---
 
@@ -322,11 +411,12 @@ pip show qa-mcp
 python -m qa_mcp.server
 ```
 
-### 2. "Connection refused" (in MCP client)
+### 2. MCP client cannot start the server
 
-- Make sure server is running
-- Check mcp.json paths
-- Restart Cursor/Claude Desktop
+- Make sure the configured `command` path is valid
+- Run `qa-mcp` manually once to verify the CLI starts
+- Check the MCP client config file for JSON mistakes
+- Restart Cursor/Claude Desktop after config changes
 
 ### Debug Mode
 
@@ -552,7 +642,39 @@ pytest tests/ -v
 }
 ```
 
-### 3. Format Dönüştürme (`testcase.normalize`)
+### 3. Toplu Lint (`testcase.lint_batch`)
+
+**Amaç:** Birden fazla test case'i analiz eder ve toplu kalite bulguları döner.
+
+**Örnek İstek:**
+
+```json
+{
+  "testcases": [
+    {
+      "title": "Valid login",
+      "description": "Verify successful login",
+      "preconditions": ["User account exists"],
+      "steps": [
+        {"step_number": 1, "action": "Submit valid credentials", "expected_result": "Dashboard opens"}
+      ],
+      "expected_result": "User is authenticated"
+    },
+    {
+      "title": "Login test",
+      "description": "Login test",
+      "preconditions": [],
+      "steps": [
+        {"step_number": 1, "action": "Login", "expected_result": "OK"}
+      ],
+      "expected_result": "Works"
+    }
+  ],
+  "strict_mode": true
+}
+```
+
+### 4. Format Dönüştürme (`testcase.normalize`)
 
 **Amaç:** Gherkin, Markdown veya düz metin formatındaki test case'leri standart formata çevirir.
 
@@ -565,7 +687,7 @@ pytest tests/ -v
 }
 ```
 
-### 4. Xray Dönüşümü (`testcase.to_xray`)
+### 5. Xray Dönüşümü (`testcase.to_xray`)
 
 **Amaç:** Standart test case'i Jira/Xray import formatına çevirir.
 
@@ -588,7 +710,50 @@ pytest tests/ -v
 }
 ```
 
-### 5. Suite Kompozisyonu (`suite.compose`)
+### 6. Toplu Xray Dönüşümü (`testcase.to_xray_batch`)
+
+**Amaç:** Birden fazla standart test case'i toplu Xray payload formatına çevirir.
+
+**Örnek İstek:**
+
+```json
+{
+  "testcases": [
+    {
+      "title": "Valid login",
+      "description": "Verify successful login",
+      "preconditions": ["User exists"],
+      "steps": [
+        {"step_number": 1, "action": "Submit valid credentials", "expected_result": "Dashboard opens"}
+      ],
+      "expected_result": "User logged in"
+    },
+    {
+      "title": "Locked account",
+      "description": "Verify blocked user behavior",
+      "preconditions": ["Locked user exists"],
+      "steps": [
+        {"step_number": 1, "action": "Submit locked account credentials", "expected_result": "Access is denied"}
+      ],
+      "expected_result": "User remains blocked"
+    }
+  ],
+  "project_key": "MYPROJ",
+  "test_type": "Manual"
+}
+```
+
+### 7. Xray Alan Eşleme Şablonu (`xray.get_mapping_template`)
+
+**Amaç:** Önerilen QA-MCP → Xray custom field eşleme şablonunu döner.
+
+**Örnek İstek:**
+
+```json
+{}
+```
+
+### 8. Suite Kompozisyonu (`suite.compose`)
 
 **Amaç:** Test case listesinden Smoke/Regression/E2E suite oluşturur.
 
@@ -598,6 +763,20 @@ pytest tests/ -v
   "target": "smoke",
   "sprint": "Sprint 15",
   "max_duration_minutes": 15
+}
+```
+
+### 9. Coverage Raporu (`suite.coverage_report`)
+
+**Amaç:** Test case koleksiyonu üzerinde requirement ve modül kapsamını raporlar.
+
+**Örnek İstek:**
+
+```json
+{
+  "testcases": [...],
+  "requirements": ["AUTH-001", "AUTH-002", "AUTH-003"],
+  "modules": ["auth", "session"]
 }
 ```
 
@@ -633,10 +812,10 @@ pytest tests/ -v
 | Değişken | Varsayılan | Açıklama |
 |----------|------------|----------|
 | `LOG_LEVEL` | `info` | Log seviyesi: debug, info, warning, error |
-| `ENABLE_WRITE_TOOLS` | `false` | Jira/Xray yazma tool'larını etkinleştirir |
 | `AUDIT_LOG_ENABLED` | `true` | Tool çağrılarını loglar |
-| `HTTP_ENABLED` | `false` | HTTP transport'u etkinleştirir |
-| `HTTP_PORT` | `8080` | HTTP port numarası |
+| `ENABLE_WRITE_TOOLS` | `false` | Ayrılmış bayrak; mevcut sürümde ek public write tool açmaz |
+
+**Runtime notu:** QA-MCP şu anda yalnızca `stdio` modunda çalışır. Container image içinde HTTP ile ilgili placeholder environment variable'lar bulunabilir, ancak bunlar mevcut sürümde aktif runtime özelliği değildir.
 
 ---
 
@@ -650,11 +829,12 @@ pip show qa-mcp
 python -m qa_mcp.server
 ```
 
-### 2. "Connection refused" (MCP istemcisinde)
+### 2. MCP istemcisi server'ı başlatamıyor
 
-- Server'ın çalıştığından emin olun
-- mcp.json yollarını kontrol edin
-- Cursor/Claude Desktop'ı yeniden başlatın
+- Tanımlanan `command` yolunun geçerli olduğundan emin olun
+- CLI'nin açıldığını doğrulamak için `qa-mcp` komutunu bir kez manuel çalıştırın
+- MCP istemci config dosyasında JSON hatası olmadığını kontrol edin
+- Config değişikliğinden sonra Cursor/Claude Desktop'ı yeniden başlatın
 
 ### Debug Modu
 

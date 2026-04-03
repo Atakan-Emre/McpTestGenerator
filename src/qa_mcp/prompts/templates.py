@@ -184,9 +184,10 @@ negatif senaryoları belirlemelisin.
 ## Output Format
 
 Her pozitif senaryo için en az 2 negatif senaryo öner.
-testcase.generate tool'unu kullanarak negatif test case'ler oluştur:
+testcase.generate tool'unu kullanarak negatif senaryoları da içeren bir aday set üret:
 - include_negative: true
-- scenario_type: negative
+- include_boundary: false
+Tool çıktısından negatif test case'leri seç ve gerekiyorsa daha spesifik failure mode'larla zenginleştir.
 """
 
     if feature:

@@ -1,109 +1,90 @@
-# QA-MCP: Test Standardization & Orchestration Server
+# QA-MCP
 
 [![CI](https://github.com/Atakan-Emre/McpTestGenerator/workflows/CI/badge.svg)](https://github.com/Atakan-Emre/McpTestGenerator/actions/workflows/ci.yml)
 [![PyPI version](https://img.shields.io/pypi/v/qa-mcp.svg)](https://pypi.org/project/qa-mcp/)
 [![Docker Pulls](https://img.shields.io/docker/pulls/atakanemree/qa-mcp.svg)](https://hub.docker.com/r/atakanemree/qa-mcp)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](https://github.com/Atakan-Emre/McpTestGenerator/blob/main/LICENSE)
 
-**QA-MCP** is an **MCP (Model Context Protocol) server** that enables LLM clients (Cursor, Claude, VS Code agents, etc.) to perform **standardized test case generation, quality control (lint), Xray format conversion, and test suite composition**.
+QA-MCP is a Model Context Protocol server for structured QA work. It helps MCP clients generate standardized test cases, lint them against a shared schema, normalize existing material, export Xray-compatible payloads, and compose suites from existing test assets.
 
-## 🚀 Quick Start
+## Runtime Model
 
-### Install via PyPI
+- Transport: `stdio` only
+- Network ports: none exposed by the application runtime
+- Intended usage: MCP client launches the container as a subprocess
 
-```bash
-pip install qa-mcp
-# or with uv (recommended)
-uv pip install qa-mcp
-```
+Current container images do not provide an active HTTP server mode.
 
-### Run with Docker
+## Quick Start
 
 ```bash
-# Pull the image
+# Pull the latest published image
 docker pull atakanemree/qa-mcp:latest
 
-# Run (stdio mode)
-docker run --rm -it atakanemree/qa-mcp:latest
+# Verify the packaged CLI
+docker run --rm atakanemree/qa-mcp:latest --version
 
-# Run with HTTP mode
-docker run --rm -p 8080:8080 -e HTTP_ENABLED=true atakanemree/qa-mcp:latest
+# Run the MCP server in stdio mode
+docker run --rm -i atakanemree/qa-mcp:latest
 ```
 
-## 🛠️ Features
+## MCP Client Configuration
 
-| Tool | Description |
-|------|-------------|
-| `generate_testcase` | Generate standardized test cases |
-| `lint_testcase` | Test case quality control (A-F grade) |
-| `normalize_testcase` | Convert Gherkin/Markdown → Standard format |
-| `convert_to_xray` | Export to Xray/Jira import format |
-| `compose_suite` | Create Smoke/Regression/E2E test suites |
-| `coverage_report` | Test coverage analysis |
+```json
+{
+  "mcpServers": {
+    "qa-mcp": {
+      "command": "docker",
+      "args": ["run", "--rm", "-i", "atakanemree/qa-mcp:latest"]
+    }
+  }
+}
+```
 
-## ⚙️ Environment Variables
+## Public Capability Summary
+
+| Tool | Purpose |
+|------|---------|
+| `testcase.generate` | Generate standardized test cases |
+| `testcase.lint` | Lint a single test case |
+| `testcase.lint_batch` | Lint multiple test cases |
+| `testcase.normalize` | Normalize Gherkin, Markdown, JSON, or plain text |
+| `testcase.to_xray` | Convert a single test case to Xray payload |
+| `testcase.to_xray_batch` | Convert multiple test cases to Xray payloads |
+| `suite.compose` | Compose smoke, sanity, regression, or E2E suites |
+| `suite.coverage_report` | Report requirement and module coverage |
+| `xray.get_mapping_template` | Return Xray mapping guidance |
+
+## Effective Runtime Configuration
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `LOG_LEVEL` | `info` | Log level (`debug`, `info`, `warning`, `error`) |
-| `HTTP_ENABLED` | `false` | Enable HTTP server mode |
-| `HTTP_PORT` | `8080` | HTTP port |
-| `ENABLE_WRITE_TOOLS` | `false` | Enable write tools |
-| `AUDIT_LOG_ENABLED` | `true` | Enable audit logging |
+| `LOG_LEVEL` | `info` | Application log level |
+| `AUDIT_LOG_ENABLED` | `true` | Enables audit logging |
 
-## 📦 Tags
+## Published Tags
 
-| Tag | Description |
-|-----|-------------|
-| `latest` | Latest stable version |
+| Tag | Meaning |
+|-----|---------|
+| `latest` | Most recent stable image |
 | `1.0.2` | Current stable release |
-| `1.0.1` | Previous stable release |
-| `1.0.0` | First stable release |
+| `1.0` | Major/minor convenience tag |
+| `1` | Major convenience tag |
 
-## 🔗 Integration
+## Security Posture
 
-### Cursor IDE
+- Runs as non-root user in the production image
+- Uses `stdio` as the primary transport
+- Does not expose write-capable Jira/Xray sync in the current release
 
-```json
-{
-  "mcpServers": {
-    "qa-mcp": {
-      "command": "docker",
-      "args": ["run", "--rm", "-i", "atakanemree/qa-mcp:latest"]
-    }
-  }
-}
-```
+## Documentation
 
-### Claude Desktop
+- GitHub repository: [Atakan-Emre/McpTestGenerator](https://github.com/Atakan-Emre/McpTestGenerator)
+- README: [README.md](https://github.com/Atakan-Emre/McpTestGenerator#readme)
+- Usage guide: [USAGE.md](https://github.com/Atakan-Emre/McpTestGenerator/blob/main/USAGE.md)
+- PyPI package: [qa-mcp](https://pypi.org/project/qa-mcp/)
 
-```json
-{
-  "mcpServers": {
-    "qa-mcp": {
-      "command": "docker",
-      "args": ["run", "--rm", "-i", "atakanemree/qa-mcp:latest"]
-    }
-  }
-}
-```
+## Maintainer
 
-## 🎯 Use Cases
-
-- **QA Teams**: Standardize test case formats across projects
-- **Developers**: Generate comprehensive test cases from requirements
-- **CI/CD Pipelines**: Automate test case quality gates
-- **Jira/Xray Users**: Seamless test case import to Xray
-
-## 📚 Documentation
-
-For detailed usage guide, visit the [GitHub Repository](https://github.com/Atakan-Emre/McpTestGenerator).
-
-## 📄 License
-
-MIT License - [LICENSE](https://github.com/Atakan-Emre/McpTestGenerator/blob/main/LICENSE)
-
-## 👤 Developer
-
-**Atakan Emre**
-- GitHub: [@Atakan-Emre](https://github.com/Atakan-Emre)
+Atakan Emre
+GitHub: [@Atakan-Emre](https://github.com/Atakan-Emre)
