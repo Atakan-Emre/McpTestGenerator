@@ -136,8 +136,7 @@ def _parse_gherkin(input_data: str) -> tuple[TestCase, list[str]]:
             TestStep(
                 step_number=step_number,
                 action="; ".join(current_actions),
-                expected_result="; ".join(current_expectations)
-                or "[Beklenen sonuç belirtilmeli]",
+                expected_result="; ".join(current_expectations) or "[Beklenen sonuç belirtilmeli]",
             )
         )
         current_actions = []
