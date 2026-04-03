@@ -138,6 +138,43 @@ Then user is successfully logged in
         result = normalize_testcase(json_input, source_format="auto")
         assert result["source_format_detected"] == "json"
 
+    def test_normalize_plain_text_short_input(self):
+        """Short plain text should still normalize into a valid testcase."""
+        result = normalize_testcase("Login", source_format="plain")
+        assert result["testcase"] is not None
+        assert len(result["testcase"]["title"]) >= 10
+        assert len(result["testcase"]["description"]) >= 20
+
+    def test_normalize_gherkin_and_after_when_stays_in_step(self):
+        """`And` after `When` should extend the action, not become a precondition."""
+        gherkin = """
+Feature: Login
+Scenario: Valid login
+Given user exists
+When user enters username
+And user enters password
+Then dashboard is shown
+        """
+        result = normalize_testcase(gherkin, source_format="gherkin")
+        testcase = result["testcase"]
+        assert testcase is not None
+        assert testcase["preconditions"] == ["user exists"]
+        assert "user enters username" in testcase["steps"][0]["action"]
+        assert "user enters password" in testcase["steps"][0]["action"]
+
+    def test_normalize_json_fallback_preserves_labels(self):
+        """Fallback JSON parsing should preserve labels semantics."""
+        input_data = {
+            "title": "JSON import testcase",
+            "description": "This testcase uses non-standard step keys for normalization.",
+            "steps": [{"action": "Run action", "expected": "See expected result"}],
+            "labels": ["smoke"],
+        }
+        result = normalize_testcase(input_data, source_format="json")
+        assert result["testcase"] is not None
+        assert result["testcase"]["labels"] == ["smoke"]
+        assert "smoke" not in result["testcase"]["tags"]
+
 
 class TestToXrayTool:
     """Test testcase.to_xray tool."""
@@ -190,6 +227,31 @@ class TestToXrayTool:
         assert result["xray_payload"] is not None
         # Custom field should be in the payload if mapping was applied
         assert "customfield_10001" in result["xray_payload"]["fields"]
+
+    def test_convert_duration_mapping_uses_template_field_name(self):
+        """`estimated_duration_minutes` should map into Xray custom fields."""
+        testcase = {
+            "title": "Duration mapping test case",
+            "description": "This test verifies estimated duration custom field mapping for Xray.",
+            "preconditions": ["System is ready for testing"],
+            "steps": [
+                {
+                    "step_number": 1,
+                    "action": "Execute the mapped duration flow",
+                    "expected_result": "Flow completes successfully",
+                }
+            ],
+            "expected_result": "Estimated duration is included in mapped custom fields",
+            "estimated_duration_minutes": 7,
+        }
+        result = convert_to_xray(
+            testcase,
+            project_key="TEST",
+            custom_field_mappings={"estimated_duration_minutes": "customfield_10042"},
+        )
+        assert result["xray_payload"] is not None
+        assert result["xray_payload"]["fields"]["customfield_10042"] == 7
+        assert "estimated_duration_minutes" not in result["field_mapping_report"]["unmapped_fields"]
 
 
 class TestComposeTool:

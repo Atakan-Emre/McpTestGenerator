@@ -56,7 +56,8 @@ docker run --rm -p 8080:8080 -e HTTP_ENABLED=true atakanemree/qa-mcp:latest
 | Tag | Description |
 |-----|-------------|
 | `latest` | Latest stable version |
-| `1.0.1` | Current stable release |
+| `1.0.2` | Current stable release |
+| `1.0.1` | Previous stable release |
 | `1.0.0` | First stable release |
 
 ## 🔗 Integration

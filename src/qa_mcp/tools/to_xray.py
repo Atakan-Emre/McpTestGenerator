@@ -104,8 +104,9 @@ def convert_to_xray(
         field_mapping_report["mapped_fields"].append("preconditions")
 
     # Custom fields
+    mapped_custom_qa_fields: set[str] = set()
     if include_custom_fields:
-        custom_fields = _build_custom_fields(tc, custom_field_mappings)
+        custom_fields, mapped_custom_qa_fields = _build_custom_fields(tc, custom_field_mappings)
         if custom_fields:
             xray_payload["fields"].update(custom_fields)
             field_mapping_report["custom_fields_used"] = list(custom_fields.keys())
@@ -122,7 +123,12 @@ def convert_to_xray(
         "steps",
         "preconditions",
     }
-    unmapped = all_tc_fields - mapped_base_fields - {"id", "created_at", "updated_at", "author"}
+    unmapped = (
+        all_tc_fields
+        - mapped_base_fields
+        - mapped_custom_qa_fields
+        - {"id", "created_at", "updated_at", "author"}
+    )
 
     for field in unmapped:
         value = getattr(tc, field, None)
@@ -252,18 +258,20 @@ def _build_xray_steps(tc: TestCase) -> list[dict]:
 def _build_custom_fields(
     tc: TestCase,
     custom_field_mappings: dict[str, str] | None,
-) -> dict[str, Any]:
+) -> tuple[dict[str, Any], set[str]]:
     """Build custom field values based on mappings."""
     custom_fields: dict[str, Any] = {}
+    mapped_qa_fields: set[str] = set()
 
     if not custom_field_mappings:
-        return custom_fields
+        return custom_fields, mapped_qa_fields
 
     # Map known fields
     field_values = {
         "risk_level": tc.risk_level.value if tc.risk_level else None,
         "scenario_type": tc.scenario_type.value if tc.scenario_type else None,
         "feature": tc.feature,
+        "estimated_duration_minutes": tc.estimated_duration_minutes,
         "estimated_duration": tc.estimated_duration_minutes,
         "requirements": ", ".join(tc.requirements) if tc.requirements else None,
     }
@@ -272,8 +280,11 @@ def _build_custom_fields(
         value = field_values.get(qa_field)
         if value is not None:
             custom_fields[xray_field_id] = value
+            mapped_qa_fields.add(qa_field)
+            if qa_field == "estimated_duration":
+                mapped_qa_fields.add("estimated_duration_minutes")
 
-    return custom_fields
+    return custom_fields, mapped_qa_fields
 
 
 def get_xray_field_mapping_template() -> dict:

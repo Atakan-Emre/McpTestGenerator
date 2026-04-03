@@ -73,12 +73,12 @@ When you create a GitHub release, the package is automatically published:
 
 1. **Update version** in `pyproject.toml`
    ```toml
-   version = "1.0.1"  # or whatever the next version is
+   version = "1.0.2"  # or whatever the next version is
    ```
 
 2. **Update CHANGELOG.md**
    ```markdown
-   ## [1.0.1] - 2025-02-06
+   ## [1.0.2] - 2026-04-03
    
    ### Added
    - New feature...
@@ -90,15 +90,15 @@ When you create a GitHub release, the package is automatically published:
 3. **Commit and push**
    ```bash
    git add pyproject.toml CHANGELOG.md
-   git commit -m "chore: bump version to 1.0.1"
+   git commit -m "chore: bump version to 1.0.2"
    git push origin main
    ```
 
 4. **Create GitHub Release**
    - Go to: https://github.com/Atakan-Emre/McpTestGenerator/releases
    - Click "Create a new release"
-   - Click "Choose a tag" → type `v1.0.1` → "Create new tag on publish"
-   - Release title: `v1.0.1`
+   - Click "Choose a tag" → type `v1.0.2` → "Create new tag on publish"
+   - Release title: `v1.0.2`
    - Use the template from `.github/RELEASE_TEMPLATE.md`
    - Click "Publish release"
 

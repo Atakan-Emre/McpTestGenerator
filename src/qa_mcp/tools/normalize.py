@@ -17,6 +17,15 @@ from qa_mcp.core.models import (
 )
 
 
+def _ensure_list(value: str | list[str] | None) -> list[str]:
+    """Normalize scalar or list inputs into a clean list of strings."""
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [value]
+    return [item for item in value if isinstance(item, str) and item.strip()]
+
+
 def normalize_testcase(
     input_data: str | dict,
     source_format: str = "auto",
@@ -104,16 +113,35 @@ def _detect_format(input_data: str | dict) -> str:
 
 def _parse_gherkin(input_data: str) -> tuple[TestCase, list[str]]:
     """Parse Gherkin format test case."""
-    warnings = []
+    warnings: list[str] = []
     text = str(input_data).strip()
     lines = text.split("\n")
 
     title = ""
     description = ""
-    steps = []
-    preconditions = []
+    steps: list[TestStep] = []
+    preconditions: list[str] = []
     step_number = 0
-    current_action = ""
+    current_actions: list[str] = []
+    current_expectations: list[str] = []
+    last_context: str | None = None
+
+    def flush_step() -> None:
+        nonlocal step_number, current_actions, current_expectations
+        if not current_actions:
+            return
+
+        step_number += 1
+        steps.append(
+            TestStep(
+                step_number=step_number,
+                action="; ".join(current_actions),
+                expected_result="; ".join(current_expectations)
+                or "[Beklenen sonuç belirtilmeli]",
+            )
+        )
+        current_actions = []
+        current_expectations = []
 
     for line in lines:
         line = line.strip()
@@ -121,29 +149,33 @@ def _parse_gherkin(input_data: str) -> tuple[TestCase, list[str]]:
         if line.startswith("Feature:"):
             description = line[8:].strip()
         elif line.startswith("Scenario:"):
+            flush_step()
             title = line[9:].strip()
+            last_context = None
         elif line.startswith("Given"):
+            flush_step()
             preconditions.append(line[5:].strip())
+            last_context = "given"
         elif line.startswith("When"):
-            step_number += 1
-            current_action = line[4:].strip()
+            flush_step()
+            current_actions = [line[4:].strip()]
+            current_expectations = []
+            last_context = "when"
         elif line.startswith("Then"):
-            expected = line[4:].strip()
-            if current_action:
-                steps.append(
-                    TestStep(
-                        step_number=step_number,
-                        action=current_action,
-                        expected_result=expected,
-                    )
-                )
-            current_action = ""
-        elif line.startswith("And"):
-            # Add to previous context
-            if steps:
-                steps[-1].expected_result += f"; {line[3:].strip()}"
-            elif preconditions:
-                preconditions.append(line[3:].strip())
+            current_expectations.append(line[4:].strip())
+            last_context = "then"
+        elif line.startswith("And") or line.startswith("But"):
+            content = line[3:].strip()
+            if last_context == "given":
+                preconditions.append(content)
+            elif last_context == "when":
+                current_actions.append(content)
+            elif last_context == "then":
+                current_expectations.append(content)
+            else:
+                warnings.append(f"Bağlamı belirsiz Gherkin satırı atlandı: {line}")
+
+    flush_step()
 
     if not title:
         title = "Gherkin'den içe aktarılan test case senaryosu"
@@ -345,6 +377,14 @@ def _parse_json(input_data: str | dict) -> tuple[TestCase, list[str]]:
         or steps[-1].expected_result
     )
 
+    tags = _ensure_list(data.get("tags"))
+    labels = _ensure_list(data.get("labels"))
+    requirements = _ensure_list(data.get("requirements"))
+    related_testcases = _ensure_list(data.get("related_testcases"))
+
+    if not tags:
+        tags = ["json-import"]
+
     tc = TestCase(
         id=data.get("id") or f"TC-{uuid.uuid4().hex[:8].upper()}",
         title=title,
@@ -353,10 +393,23 @@ def _parse_json(input_data: str | dict) -> tuple[TestCase, list[str]]:
         steps=steps,
         expected_result=expected_result,
         module=data.get("module") or data.get("component"),
-        tags=data.get("tags") or data.get("labels") or ["json-import"],
+        feature=data.get("feature"),
+        scenario_type=ScenarioType(data["scenario_type"])
+        if data.get("scenario_type") in {scenario.value for scenario in ScenarioType}
+        else ScenarioType.POSITIVE,
+        risk_level=RiskLevel(data["risk_level"])
+        if data.get("risk_level") in {risk.value for risk in RiskLevel}
+        else RiskLevel.MEDIUM,
         priority=Priority(data["priority"])
         if data.get("priority") in ["P0", "P1", "P2", "P3"]
         else Priority.P2,
+        tags=tags,
+        labels=labels,
+        estimated_duration_minutes=data.get("estimated_duration_minutes")
+        if isinstance(data.get("estimated_duration_minutes"), int)
+        else None,
+        requirements=requirements,
+        related_testcases=related_testcases,
     )
 
     return tc, warnings
@@ -373,6 +426,11 @@ def _parse_plain_text(input_data: str) -> tuple[TestCase, list[str]]:
 
     # Rest as description/steps
     description = " ".join(lines[1:]) if len(lines) > 1 else title
+
+    if len(title) < 10:
+        title = f"Düz metin: {title}"
+    if len(description) < 20:
+        description = f"Düz metinden dönüştürülen not: {description}"
 
     # Try to extract numbered steps
     steps = []

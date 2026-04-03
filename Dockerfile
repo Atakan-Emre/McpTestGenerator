@@ -5,7 +5,7 @@ FROM python:3.11-slim AS base
 
 LABEL org.opencontainers.image.title="QA-MCP"
 LABEL org.opencontainers.image.description="Test Standardization & Orchestration MCP Server"
-LABEL org.opencontainers.image.version="1.0.0"
+LABEL org.opencontainers.image.version="1.0.2"
 LABEL org.opencontainers.image.authors="Atakan Emre"
 LABEL org.opencontainers.image.source="https://github.com/Atakan-Emre/McpTestGenerator"
 LABEL org.opencontainers.image.licenses="MIT"
@@ -52,3 +52,6 @@ RUN pip install --no-cache-dir -e ".[dev]"
 
 ENTRYPOINT ["python"]
 CMD ["-m", "pytest", "tests/", "-v"]
+
+
+FROM production AS final

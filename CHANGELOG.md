@@ -21,6 +21,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.2] - 2026-04-03
+
+### Fixed
+- Preserved `labels` when JSON normalization falls back to manual field mapping
+- Corrected plain-text normalization for short freeform notes
+- Corrected Gherkin parsing so `And` lines after `When` remain part of the action flow
+- Fixed Xray custom field mapping for `estimated_duration_minutes`
+- Synchronized PyPI package version and Docker image metadata to `1.0.2`
+
+---
+
 ## [1.0.0] - 2025-01-15
 
 ### Added
