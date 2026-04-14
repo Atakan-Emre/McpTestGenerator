@@ -6,7 +6,7 @@ This document describes the release process for the `qa-mcp` Python package and 
 
 QA-MCP uses a tag-driven release flow.
 
-Pushing a semantic version tag such as `v1.0.3` triggers:
+Pushing a semantic version tag such as `v1.0.4` triggers:
 
 - Docker image build and publish to Docker Hub
 - GitHub release creation
@@ -40,7 +40,7 @@ At minimum, align the version across:
 Example:
 
 ```toml
-version = "1.0.3"
+version = "1.0.4"
 ```
 
 ### 2. Verify the package locally
@@ -50,23 +50,23 @@ uv run --extra dev pytest -q
 uv run --extra dev ruff check .
 uv run --extra dev mypy src
 uv run qa-mcp --version
-docker build -t qa-mcp:1.0.3 .
-docker run --rm qa-mcp:1.0.3 --version
+docker build -t qa-mcp:1.0.4 .
+docker run --rm qa-mcp:1.0.4 --version
 ```
 
 ### 3. Commit and push `main`
 
 ```bash
 git add .
-git commit -m "chore: prepare 1.0.3 release"
+git commit -m "chore: prepare 1.0.4 release"
 git push origin main
 ```
 
 ### 4. Create and push the release tag
 
 ```bash
-git tag -a v1.0.3 -m "QA-MCP v1.0.3"
-git push origin v1.0.3
+git tag -a v1.0.4 -m "QA-MCP v1.0.4"
+git push origin v1.0.4
 ```
 
 That tag push is what starts the release automation.
@@ -82,7 +82,7 @@ Triggered by:
 Responsibilities:
 
 - Build and push multi-arch Docker images
-- Publish semver Docker tags such as `1.0.3`, `1.0`, `1`, and `latest`
+- Publish semver Docker tags such as `1.0.4`, `1.0`, `1`, and `latest`
 - Create the GitHub release page
 
 ### Publish to PyPI workflow
@@ -134,8 +134,8 @@ If the tag points to the wrong commit, delete the tag locally and remotely, recr
 If the tag has not been consumed externally yet:
 
 ```bash
-git tag -d v1.0.3
-git push origin :refs/tags/v1.0.3
+git tag -d v1.0.4
+git push origin :refs/tags/v1.0.4
 ```
 
 Then fix the versioned files, recommit if necessary, recreate the tag, and push again.

@@ -22,6 +22,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.4] - 2026-04-14
+
+### Fixed
+- Formatted the MCP server module to satisfy the strict Ruff formatting gate in CI
+- Rolled forward the Claude Desktop-compatible tool name release into a clean `1.0.4` publish target
+
+### Documentation
+- Synchronized PyPI, Docker, compose, and publishing references to `1.0.4`
+
+---
+
 ## [1.0.3] - 2026-04-14
 
 ### Fixed
