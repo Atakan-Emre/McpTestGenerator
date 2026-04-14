@@ -46,6 +46,23 @@ from qa_mcp.tools.to_xray import (
 
 PromptFactory = Callable[..., dict[str, Any]]
 
+TOOL_NAME_ALIASES = {
+    "testcase.generate": "testcase_generate",
+    "testcase.lint": "testcase_lint",
+    "testcase.lint_batch": "testcase_lint_batch",
+    "testcase.normalize": "testcase_normalize",
+    "testcase.to_xray": "testcase_to_xray",
+    "testcase.to_xray_batch": "testcase_to_xray_batch",
+    "suite.compose": "suite_compose",
+    "suite.coverage_report": "suite_coverage_report",
+    "xray.get_mapping_template": "xray_get_mapping_template",
+}
+
+
+def _canonicalize_tool_name(name: str) -> str:
+    """Return the Claude Desktop-safe tool name for the requested tool."""
+    return TOOL_NAME_ALIASES.get(name, name)
+
 # Configure logging
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 logging.basicConfig(
@@ -91,7 +108,7 @@ async def list_tools() -> list[Tool]:
     """List available tools."""
     tools = [
         Tool(
-            name="testcase.generate",
+            name="testcase_generate",
             description="Feature açıklaması ve acceptance criteria'dan standart test case üretir",
             inputSchema={
                 "type": "object",
@@ -127,7 +144,7 @@ async def list_tools() -> list[Tool]:
             },
         ),
         Tool(
-            name="testcase.lint",
+            name="testcase_lint",
             description="Test case'i analiz eder, kalite skoru ve iyileştirme önerileri döner",
             inputSchema={
                 "type": "object",
@@ -149,7 +166,7 @@ async def list_tools() -> list[Tool]:
             },
         ),
         Tool(
-            name="testcase.lint_batch",
+            name="testcase_lint_batch",
             description="Birden fazla test case'i toplu analiz eder",
             inputSchema={
                 "type": "object",
@@ -168,7 +185,7 @@ async def list_tools() -> list[Tool]:
             },
         ),
         Tool(
-            name="testcase.normalize",
+            name="testcase_normalize",
             description="Farklı formatlardaki test case'leri QA-MCP standardına çevirir",
             inputSchema={
                 "type": "object",
@@ -187,7 +204,7 @@ async def list_tools() -> list[Tool]:
             },
         ),
         Tool(
-            name="testcase.to_xray",
+            name="testcase_to_xray",
             description="Standart test case'i Xray import formatına dönüştürür",
             inputSchema={
                 "type": "object",
@@ -218,7 +235,7 @@ async def list_tools() -> list[Tool]:
             },
         ),
         Tool(
-            name="testcase.to_xray_batch",
+            name="testcase_to_xray_batch",
             description="Birden fazla test case'i toplu olarak Xray formatına dönüştürür",
             inputSchema={
                 "type": "object",
@@ -241,7 +258,7 @@ async def list_tools() -> list[Tool]:
             },
         ),
         Tool(
-            name="suite.compose",
+            name="suite_compose",
             description="Test case listesinden Smoke/Regression/E2E suite oluşturur",
             inputSchema={
                 "type": "object",
@@ -269,7 +286,7 @@ async def list_tools() -> list[Tool]:
             },
         ),
         Tool(
-            name="suite.coverage_report",
+            name="suite_coverage_report",
             description="Test suite için kapsam raporu oluşturur",
             inputSchema={
                 "type": "object",
@@ -294,7 +311,7 @@ async def list_tools() -> list[Tool]:
             },
         ),
         Tool(
-            name="xray.get_mapping_template",
+            name="xray_get_mapping_template",
             description="Xray alan eşleme şablonunu döner",
             inputSchema={
                 "type": "object",
@@ -309,12 +326,13 @@ async def list_tools() -> list[Tool]:
 @server.call_tool()
 async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
     """Handle tool calls."""
-    logger.debug(f"Tool called: {name} with args: {arguments}")
+    canonical_name = _canonicalize_tool_name(name)
+    logger.debug(f"Tool called: {name} (canonical: {canonical_name}) with args: {arguments}")
 
     try:
         result: Any = None
 
-        if name == "testcase.generate":
+        if canonical_name == "testcase_generate":
             result = generate_testcase(
                 feature=arguments["feature"],
                 acceptance_criteria=arguments["acceptance_criteria"],
@@ -323,40 +341,40 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
                 include_negative=arguments.get("include_negative", True),
                 include_boundary=arguments.get("include_boundary", True),
             )
-            audit_log(name, arguments, f"Generated {result.get('total_generated', 0)} test cases")
+            audit_log(canonical_name, arguments, f"Generated {result.get('total_generated', 0)} test cases")
 
-        elif name == "testcase.lint":
+        elif canonical_name == "testcase_lint":
             result = lint_testcase(
                 testcase=arguments["testcase"],
                 include_improvement_plan=arguments.get("include_improvement_plan", True),
                 strict_mode=arguments.get("strict_mode", False),
             )
-            audit_log(name, arguments, f"Lint score: {result.get('score', 0)}")
+            audit_log(canonical_name, arguments, f"Lint score: {result.get('score', 0)}")
 
-        elif name == "testcase.lint_batch":
+        elif canonical_name == "testcase_lint_batch":
             result = lint_batch(
                 testcases=arguments["testcases"],
                 include_improvement_plan=False,
                 strict_mode=arguments.get("strict_mode", False),
             )
             audit_log(
-                name,
+                canonical_name,
                 arguments,
                 f"Batch lint: {result.get('aggregate', {}).get('average_score', 0)} avg",
             )
 
-        elif name == "testcase.normalize":
+        elif canonical_name == "testcase_normalize":
             result = normalize_testcase(
                 input_data=arguments["input_data"],
                 source_format=arguments.get("source_format", "auto"),
             )
             audit_log(
-                name,
+                canonical_name,
                 arguments,
                 f"Normalized from {result.get('source_format_detected', 'unknown')}",
             )
 
-        elif name == "testcase.to_xray":
+        elif canonical_name == "testcase_to_xray":
             result = convert_to_xray(
                 testcase=arguments["testcase"],
                 project_key=arguments["project_key"],
@@ -364,42 +382,44 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
                 include_custom_fields=arguments.get("include_custom_fields", True),
                 custom_field_mappings=arguments.get("custom_field_mappings"),
             )
-            audit_log(name, arguments, f"Converted to Xray for {arguments['project_key']}")
+            audit_log(canonical_name, arguments, f"Converted to Xray for {arguments['project_key']}")
 
-        elif name == "testcase.to_xray_batch":
+        elif canonical_name == "testcase_to_xray_batch":
             result = convert_batch_to_xray(
                 testcases=arguments["testcases"],
                 project_key=arguments["project_key"],
                 test_type=arguments.get("test_type", "Manual"),
             )
             audit_log(
-                name,
+                canonical_name,
                 arguments,
                 f"Batch converted {result.get('summary', {}).get('successful', 0)} to Xray",
             )
 
-        elif name == "suite.compose":
+        elif canonical_name == "suite_compose":
             result = compose_suite(
                 testcases=arguments["testcases"],
                 target=arguments["target"],
                 sprint=arguments.get("sprint"),
                 max_duration_minutes=arguments.get("max_duration_minutes"),
             )
-            audit_log(name, arguments, f"Composed {arguments['target']} suite")
+            audit_log(canonical_name, arguments, f"Composed {arguments['target']} suite")
 
-        elif name == "suite.coverage_report":
+        elif canonical_name == "suite_coverage_report":
             result = coverage_report(
                 testcases=arguments["testcases"],
                 requirements=arguments.get("requirements"),
                 modules=arguments.get("modules"),
             )
             audit_log(
-                name, arguments, f"Coverage report for {result.get('total_testcases', 0)} tests"
+                canonical_name,
+                arguments,
+                f"Coverage report for {result.get('total_testcases', 0)} tests",
             )
 
-        elif name == "xray.get_mapping_template":
+        elif canonical_name == "xray_get_mapping_template":
             result = get_xray_field_mapping_template()
-            audit_log(name, arguments, "Returned mapping template")
+            audit_log(canonical_name, arguments, "Returned mapping template")
 
         else:
             return [

@@ -90,17 +90,19 @@ Configure your preferred MCP client (e.g., Claude Desktop) to use QA-MCP.
 
 ### Tools
 
+Tool names intentionally use underscores so Claude Desktop and other strict MCP clients accept them.
+
 | Tool | Purpose |
 |------|---------|
-| `testcase.generate` | Generate standardized test cases from feature text and acceptance criteria. |
-| `testcase.lint` | Analyze a single test case, returning a quality score, issues, and improvement steps. |
-| `testcase.lint_batch` | Analyze a collection of test cases and return aggregate findings. |
-| `testcase.normalize` | Normalize Gherkin, Markdown, JSON, or plain text into the QA-MCP schema. |
-| `testcase.to_xray` | Convert a single test case into an Xray-compatible JSON payload. |
-| `testcase.to_xray_batch` | Convert multiple test cases into Xray-compatible bulk payloads. |
-| `suite.compose` | Select and compose Smoke, Sanity, Regression, or E2E suites. |
-| `suite.coverage_report` | Generate requirement, module, risk, and scenario coverage reports. |
-| `xray.get_mapping_template`| Get the suggested QA-MCP to Xray field mapping template. |
+| `testcase_generate` | Generate standardized test cases from feature text and acceptance criteria. |
+| `testcase_lint` | Analyze a single test case, returning a quality score, issues, and improvement steps. |
+| `testcase_lint_batch` | Analyze a collection of test cases and return aggregate findings. |
+| `testcase_normalize` | Normalize Gherkin, Markdown, JSON, or plain text into the QA-MCP schema. |
+| `testcase_to_xray` | Convert a single test case into an Xray-compatible JSON payload. |
+| `testcase_to_xray_batch` | Convert multiple test cases into Xray-compatible bulk payloads. |
+| `suite_compose` | Select and compose Smoke, Sanity, Regression, or E2E suites. |
+| `suite_coverage_report` | Generate requirement, module, risk, and scenario coverage reports. |
+| `xray_get_mapping_template`| Get the suggested QA-MCP to Xray field mapping template. |
 
 ### Resources
 
@@ -246,17 +248,19 @@ Tercih ettiğiniz MCP istemcisini (örn. Claude Desktop) QA-MCP kullanacak şeki
 
 ### Tool'lar (Araçlar)
 
+Tool adları Claude Desktop gibi katı MCP istemcileriyle uyum için bilerek underscore (`_`) kullanır.
+
 | Tool | Amaç |
 |------|------|
-| `testcase.generate` | Feature metni ve kabul kriterlerinden standart test case üretir. |
-| `testcase.lint` | Test case'i analiz eder; kalite skoru, sorunlar ve iyileştirme adımları döner. |
-| `testcase.lint_batch` | Birden fazla test case için toplu analiz yapar. |
-| `testcase.normalize` | Gherkin, Markdown, JSON veya düz metni QA-MCP şemasına dönüştürür. |
-| `testcase.to_xray` | Tek bir test case'i Xray uyumlu JSON payload'a çevirir. |
-| `testcase.to_xray_batch`| Test case'leri toplu Xray payload formatına çevirir. |
-| `suite.compose` | Smoke, Sanity, Regression veya E2E suite kompozisyonu oluşturur. |
-| `suite.coverage_report` | Gereksinim, modül, risk ve senaryo kapsamını raporlar. |
-| `xray.get_mapping_template`| QA-MCP -\> Xray alan eşleme şablonunu döner. |
+| `testcase_generate` | Feature metni ve kabul kriterlerinden standart test case üretir. |
+| `testcase_lint` | Test case'i analiz eder; kalite skoru, sorunlar ve iyileştirme adımları döner. |
+| `testcase_lint_batch` | Birden fazla test case için toplu analiz yapar. |
+| `testcase_normalize` | Gherkin, Markdown, JSON veya düz metni QA-MCP şemasına dönüştürür. |
+| `testcase_to_xray` | Tek bir test case'i Xray uyumlu JSON payload'a çevirir. |
+| `testcase_to_xray_batch`| Test case'leri toplu Xray payload formatına çevirir. |
+| `suite_compose` | Smoke, Sanity, Regression veya E2E suite kompozisyonu oluşturur. |
+| `suite_coverage_report` | Gereksinim, modül, risk ve senaryo kapsamını raporlar. |
+| `xray_get_mapping_template`| QA-MCP -\> Xray alan eşleme şablonunu döner. |
 
 ### Resource'lar (Kaynaklar)
 

@@ -39,7 +39,7 @@ kapsamlı test case'ler oluşturman gerekiyor.
 
 ## Output Format
 
-testcase.generate tool'unu kullanarak test case oluştur. Tool şu parametreleri alır:
+testcase_generate tool'unu kullanarak test case oluştur. Tool şu parametreleri alır:
 - feature: Feature açıklaması
 - acceptance_criteria: Kabul kriterleri listesi
 - module: Modül adı (opsiyonel)
@@ -110,7 +110,7 @@ oluşturman gerekiyor.
 
 ## Output Format
 
-suite.compose tool'unu kullanarak smoke suite oluştur:
+suite_compose tool'unu kullanarak smoke suite oluştur:
 - testcases: Tüm test case listesi
 - target: "smoke"
 - max_duration_minutes: {max_duration}
@@ -184,7 +184,7 @@ negatif senaryoları belirlemelisin.
 ## Output Format
 
 Her pozitif senaryo için en az 2 negatif senaryo öner.
-testcase.generate tool'unu kullanarak negatif senaryoları da içeren bir aday set üret:
+testcase_generate tool'unu kullanarak negatif senaryoları da içeren bir aday set üret:
 - include_negative: true
 - include_boundary: false
 Tool çıktısından negatif test case'leri seç ve gerekiyorsa daha spesifik failure mode'larla zenginleştir.
@@ -250,7 +250,7 @@ eksikleri belirlemelisin.
 
 ## Output Format
 
-suite.coverage_report tool'unu kullanarak analiz yap:
+suite_coverage_report tool'unu kullanarak analiz yap:
 - testcases: Test case listesi
 - requirements: Gereksinim listesi (opsiyonel)
 - modules: Modül listesi (opsiyonel)

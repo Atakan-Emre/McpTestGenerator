@@ -45,15 +45,15 @@ docker run --rm -i atakanemree/qa-mcp:latest
 
 | Tool | Purpose |
 |------|---------|
-| `testcase.generate` | Generate standardized test cases |
-| `testcase.lint` | Lint a single test case |
-| `testcase.lint_batch` | Lint multiple test cases |
-| `testcase.normalize` | Normalize Gherkin, Markdown, JSON, or plain text |
-| `testcase.to_xray` | Convert a single test case to Xray payload |
-| `testcase.to_xray_batch` | Convert multiple test cases to Xray payloads |
-| `suite.compose` | Compose smoke, sanity, regression, or E2E suites |
-| `suite.coverage_report` | Report requirement and module coverage |
-| `xray.get_mapping_template` | Return Xray mapping guidance |
+| `testcase_generate` | Generate standardized test cases |
+| `testcase_lint` | Lint a single test case |
+| `testcase_lint_batch` | Lint multiple test cases |
+| `testcase_normalize` | Normalize Gherkin, Markdown, JSON, or plain text |
+| `testcase_to_xray` | Convert a single test case to Xray payload |
+| `testcase_to_xray_batch` | Convert multiple test cases to Xray payloads |
+| `suite_compose` | Compose smoke, sanity, regression, or E2E suites |
+| `suite_coverage_report` | Report requirement and module coverage |
+| `xray_get_mapping_template` | Return Xray mapping guidance |
 
 ## Effective Runtime Configuration
 
@@ -67,7 +67,7 @@ docker run --rm -i atakanemree/qa-mcp:latest
 | Tag | Meaning |
 |-----|---------|
 | `latest` | Most recent stable image |
-| `1.0.2` | Current stable release |
+| `1.0.3` | Current stable release |
 | `1.0` | Major/minor convenience tag |
 | `1` | Major convenience tag |
 

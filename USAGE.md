@@ -140,7 +140,9 @@ Add to `~/.claude/claude_desktop_config.json`:
 
 ## 🔧 Tool Usage Examples
 
-### 1. Test Case Generation (`testcase.generate`)
+Tool names use underscores to stay compatible with Claude Desktop's MCP validator.
+
+### 1. Test Case Generation (`testcase_generate`)
 
 **Purpose:** Generates standard test cases from feature and acceptance criteria.
 
@@ -183,7 +185,7 @@ Add to `~/.claude/claude_desktop_config.json`:
 }
 ```
 
-### 2. Test Case Lint (`testcase.lint`)
+### 2. Test Case Lint (`testcase_lint`)
 
 **Purpose:** Analyzes test case quality, returns score and improvement suggestions.
 
@@ -224,7 +226,7 @@ Add to `~/.claude/claude_desktop_config.json`:
 }
 ```
 
-### 3. Batch Lint (`testcase.lint_batch`)
+### 3. Batch Lint (`testcase_lint_batch`)
 
 **Purpose:** Analyzes multiple test cases and returns aggregate quality findings.
 
@@ -256,7 +258,7 @@ Add to `~/.claude/claude_desktop_config.json`:
 }
 ```
 
-### 4. Format Conversion (`testcase.normalize`)
+### 4. Format Conversion (`testcase_normalize`)
 
 **Purpose:** Converts test cases from Gherkin, Markdown, or plain text to standard format.
 
@@ -269,7 +271,7 @@ Add to `~/.claude/claude_desktop_config.json`:
 }
 ```
 
-### 5. Xray Conversion (`testcase.to_xray`)
+### 5. Xray Conversion (`testcase_to_xray`)
 
 **Purpose:** Converts standard test case to Jira/Xray import format.
 
@@ -292,7 +294,7 @@ Add to `~/.claude/claude_desktop_config.json`:
 }
 ```
 
-### 6. Batch Xray Conversion (`testcase.to_xray_batch`)
+### 6. Batch Xray Conversion (`testcase_to_xray_batch`)
 
 **Purpose:** Converts multiple standard test cases into Xray-compatible bulk payloads.
 
@@ -325,7 +327,7 @@ Add to `~/.claude/claude_desktop_config.json`:
 }
 ```
 
-### 7. Xray Mapping Template (`xray.get_mapping_template`)
+### 7. Xray Mapping Template (`xray_get_mapping_template`)
 
 **Purpose:** Returns the recommended QA-MCP to Xray custom field mapping template.
 
@@ -335,7 +337,7 @@ Add to `~/.claude/claude_desktop_config.json`:
 {}
 ```
 
-### 8. Suite Composition (`suite.compose`)
+### 8. Suite Composition (`suite_compose`)
 
 **Purpose:** Creates Smoke/Regression/E2E suite from test case list.
 
@@ -348,7 +350,7 @@ Add to `~/.claude/claude_desktop_config.json`:
 }
 ```
 
-### 9. Coverage Report (`suite.coverage_report`)
+### 9. Coverage Report (`suite_coverage_report`)
 
 **Purpose:** Reports requirement and module coverage across a test case collection.
 
@@ -558,7 +560,9 @@ pytest tests/ -v
 
 ## 🔧 Tool Kullanım Örnekleri
 
-### 1. Test Case Üretimi (`testcase.generate`)
+Tool adları Claude Desktop MCP doğrulayıcısıyla uyum için underscore kullanır.
+
+### 1. Test Case Üretimi (`testcase_generate`)
 
 **Amaç:** Feature ve acceptance criteria'dan standart test case üretir.
 
@@ -601,7 +605,7 @@ pytest tests/ -v
 }
 ```
 
-### 2. Test Case Lint (`testcase.lint`)
+### 2. Test Case Lint (`testcase_lint`)
 
 **Amaç:** Test case kalitesini analiz eder, skor ve iyileştirme önerileri döner.
 
@@ -642,7 +646,7 @@ pytest tests/ -v
 }
 ```
 
-### 3. Toplu Lint (`testcase.lint_batch`)
+### 3. Toplu Lint (`testcase_lint_batch`)
 
 **Amaç:** Birden fazla test case'i analiz eder ve toplu kalite bulguları döner.
 
@@ -674,7 +678,7 @@ pytest tests/ -v
 }
 ```
 
-### 4. Format Dönüştürme (`testcase.normalize`)
+### 4. Format Dönüştürme (`testcase_normalize`)
 
 **Amaç:** Gherkin, Markdown veya düz metin formatındaki test case'leri standart formata çevirir.
 
@@ -687,7 +691,7 @@ pytest tests/ -v
 }
 ```
 
-### 5. Xray Dönüşümü (`testcase.to_xray`)
+### 5. Xray Dönüşümü (`testcase_to_xray`)
 
 **Amaç:** Standart test case'i Jira/Xray import formatına çevirir.
 
@@ -710,7 +714,7 @@ pytest tests/ -v
 }
 ```
 
-### 6. Toplu Xray Dönüşümü (`testcase.to_xray_batch`)
+### 6. Toplu Xray Dönüşümü (`testcase_to_xray_batch`)
 
 **Amaç:** Birden fazla standart test case'i toplu Xray payload formatına çevirir.
 
@@ -743,7 +747,7 @@ pytest tests/ -v
 }
 ```
 
-### 7. Xray Alan Eşleme Şablonu (`xray.get_mapping_template`)
+### 7. Xray Alan Eşleme Şablonu (`xray_get_mapping_template`)
 
 **Amaç:** Önerilen QA-MCP → Xray custom field eşleme şablonunu döner.
 
@@ -753,7 +757,7 @@ pytest tests/ -v
 {}
 ```
 
-### 8. Suite Kompozisyonu (`suite.compose`)
+### 8. Suite Kompozisyonu (`suite_compose`)
 
 **Amaç:** Test case listesinden Smoke/Regression/E2E suite oluşturur.
 
@@ -766,7 +770,7 @@ pytest tests/ -v
 }
 ```
 
-### 9. Coverage Raporu (`suite.coverage_report`)
+### 9. Coverage Raporu (`suite_coverage_report`)
 
 **Amaç:** Test case koleksiyonu üzerinde requirement ve modül kapsamını raporlar.
 

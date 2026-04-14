@@ -22,6 +22,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.3] - 2026-04-14
+
+### Fixed
+- Renamed public MCP tool names to underscore format so Claude Desktop accepts the server tool list
+- Preserved backward compatibility by continuing to accept legacy dotted tool aliases on tool calls
+- Synchronized PyPI package version, Docker image metadata, and compose defaults to `1.0.3`
+
+### Documentation
+- Updated README, usage guide, prompt templates, and Docker Hub description to reflect Claude-safe tool names
+
+---
+
 ## [1.0.2] - 2026-04-03
 
 ### Fixed
