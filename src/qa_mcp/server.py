@@ -63,6 +63,7 @@ def _canonicalize_tool_name(name: str) -> str:
     """Return the Claude Desktop-safe tool name for the requested tool."""
     return TOOL_NAME_ALIASES.get(name, name)
 
+
 # Configure logging
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 logging.basicConfig(
@@ -341,7 +342,11 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
                 include_negative=arguments.get("include_negative", True),
                 include_boundary=arguments.get("include_boundary", True),
             )
-            audit_log(canonical_name, arguments, f"Generated {result.get('total_generated', 0)} test cases")
+            audit_log(
+                canonical_name,
+                arguments,
+                f"Generated {result.get('total_generated', 0)} test cases",
+            )
 
         elif canonical_name == "testcase_lint":
             result = lint_testcase(
@@ -382,7 +387,9 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
                 include_custom_fields=arguments.get("include_custom_fields", True),
                 custom_field_mappings=arguments.get("custom_field_mappings"),
             )
-            audit_log(canonical_name, arguments, f"Converted to Xray for {arguments['project_key']}")
+            audit_log(
+                canonical_name, arguments, f"Converted to Xray for {arguments['project_key']}"
+            )
 
         elif canonical_name == "testcase_to_xray_batch":
             result = convert_batch_to_xray(
