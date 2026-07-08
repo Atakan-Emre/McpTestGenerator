@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/atakan-emre-mcptestgenerator-badge.png)](https://mseep.ai/app/atakan-emre-mcptestgenerator)
+
 # QA-MCP
 
 <div align="center">
