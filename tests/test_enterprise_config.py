@@ -26,6 +26,20 @@ TENANT = {
 
 
 @pytest.fixture(autouse=True)
+def fresh_settings():
+    """Read the environment per test.
+
+    `get_settings()` is cached for the life of the process, which is what a
+    server wants and what a test must not inherit from the test before it.
+    """
+    from qa_mcp.config import get_settings
+
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
+
+
+@pytest.fixture(autouse=True)
 def restore_tool_registry():
     """Undo tool registrations a test performs.
 
@@ -353,3 +367,138 @@ class TestLegacyEnvironmentNames:
         monkeypatch.setenv("QA_MCP_LOG_LEVEL", "error")
 
         assert Settings().log_level == "ERROR"
+
+
+class TestXrayToolWrappers:
+    """The MCP-facing wrappers around the Jira client.
+
+    Between the client and tool registration sits a thin layer that validates
+    each response into its result model. It was the one part of the Jira path no
+    test executed, and it is the first thing an enterprise user touches.
+    """
+
+    @pytest.fixture
+    def wired(self, tenant_env, monkeypatch):
+        """Point the wrappers at a client backed by the mock transport."""
+        import contextlib
+
+        from qa_mcp import server
+
+        @contextlib.contextmanager
+        def _client():
+            with XrayClient(Settings(), transport=_mock_transport(_ok_handler)) as client:
+                yield client
+
+        monkeypatch.setattr(server, "_xray_client", _client)
+        return server
+
+    def test_verify_connection_returns_a_typed_status(self, wired):
+        status = wired.xray_verify_connection()
+
+        assert status.connected is True
+        assert status.account.display_name == "QA Bot"
+        assert status.write_tools_enabled is False
+
+    def test_search_returns_typed_summaries(self, wired):
+        result = wired.xray_search_tests()
+
+        assert result.total == 1
+        assert result.tests[0].issue_key == "QA-1"
+        assert result.tests[0].labels == ["smoke"]
+
+    def test_search_forwards_its_arguments(self, wired):
+        result = wired.xray_search_tests(jql='project = "OTHER"', max_results=5)
+        assert result.jql == 'project = "OTHER"'
+
+    def test_get_test_returns_a_typed_summary(self, wired, monkeypatch):
+        def handler(request):
+            return httpx.Response(
+                200,
+                json={"key": "QA-7", "id": "7", "fields": {"summary": "Checkout"}},
+            )
+
+        import contextlib
+
+        @contextlib.contextmanager
+        def _client():
+            with XrayClient(Settings(), transport=_mock_transport(handler)) as client:
+                yield client
+
+        monkeypatch.setattr(wired, "_xray_client", _client)
+        assert wired.xray_get_test("QA-7").issue_key == "QA-7"
+
+    def test_create_is_refused_while_writes_are_off(self, wired):
+        """The wrapper must not be a way around the write gate."""
+        with pytest.raises(XrayError, match="QA_MCP_ENABLE_WRITE_TOOLS"):
+            wired.xray_create_test({"fields": {"summary": "x"}})
+
+    def test_create_returns_a_typed_result_when_enabled(self, wired, monkeypatch):
+        monkeypatch.setenv("QA_MCP_ENABLE_WRITE_TOOLS", "true")
+
+        created = wired.xray_create_test({"fields": {"summary": "Login test"}})
+
+        assert created.created is True
+        assert created.issue_key == "QA-42"
+
+    def test_an_unconfigured_tenant_surfaces_a_clear_error(self, monkeypatch):
+        """Called without a tenant, the wrapper must explain rather than crash."""
+        from qa_mcp import server
+
+        for key in TENANT:
+            monkeypatch.delenv(key, raising=False)
+        monkeypatch.setattr(server, "get_settings", Settings)
+
+        with pytest.raises(XrayError, match="yapılandırılmamış"):
+            server.xray_verify_connection()
+
+
+class TestCheckConfigCommand:
+    """`qa-mcp --check-config` is the documented first step; it must work."""
+
+    def test_it_reports_the_offline_configuration(self, monkeypatch, capsys):
+        from qa_mcp.server import main
+
+        for key in TENANT:
+            monkeypatch.delenv(key, raising=False)
+        monkeypatch.delenv("QA_MCP_ENABLE_WRITE_TOOLS", raising=False)
+        monkeypatch.setattr("sys.argv", ["qa-mcp", "--check-config"])
+
+        main()
+
+        report = json.loads(capsys.readouterr().out)
+        assert report["configuration"]["xray"]["configured"] is False
+        assert report["optional_tools"] == []
+
+    def test_it_lists_the_tools_a_tenant_would_add(self, tenant_env, monkeypatch, capsys):
+        from qa_mcp.server import main
+
+        monkeypatch.setattr("sys.argv", ["qa-mcp", "--check-config"])
+
+        main()
+
+        report = json.loads(capsys.readouterr().out)
+        assert "xray_verify_connection" in report["optional_tools"]
+        assert "xray_create_test" not in report["optional_tools"]
+
+    def test_it_never_prints_the_token(self, tenant_env, monkeypatch, capsys):
+        from qa_mcp.server import main
+
+        monkeypatch.setattr("sys.argv", ["qa-mcp", "--check-config"])
+
+        main()
+
+        assert "SECRET-TOKEN-VALUE" not in capsys.readouterr().out
+
+    def test_a_bad_configuration_exits_non_zero(self, monkeypatch):
+        """Exit code 2, not a traceback: this runs in deployment scripts."""
+        from qa_mcp.server import main
+
+        for key in TENANT:
+            monkeypatch.delenv(key, raising=False)
+        monkeypatch.setenv("QA_MCP_ENABLE_WRITE_TOOLS", "true")
+        monkeypatch.setattr("sys.argv", ["qa-mcp", "--check-config"])
+
+        with pytest.raises(SystemExit) as excinfo:
+            main()
+
+        assert excinfo.value.code == 2

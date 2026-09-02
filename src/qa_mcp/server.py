@@ -36,7 +36,7 @@ from mcp.types import (
 )
 
 from qa_mcp import __version__
-from qa_mcp.config import Settings, get_settings
+from qa_mcp.config import Settings, get_settings, reload_settings
 from qa_mcp.core.results import (
     CoverageReportResult,
     GenerateResult,
@@ -438,8 +438,9 @@ def register_optional_tools(settings: Settings | None = None) -> list[str]:
     def _add(fn: Callable[..., Any], name: str, title: str, annotations: ToolAnnotations) -> None:
         """Register a tool unless it is already there.
 
-        `main()` and `build_server()` can both run this, and a host may build
-        the server more than once; re-registering would either warn or replace.
+        A host may build the server more than once, and `main()` runs this
+        after `--check-config` has already done so; re-registering a tool would
+        either warn or replace it.
         """
         if name in existing:
             return
@@ -666,13 +667,6 @@ def configure_logging(settings: Settings) -> None:
     )
 
 
-def build_server(settings: Settings | None = None) -> MCPServer:
-    """Return the configured server, with its optional tools registered."""
-    settings = settings or get_settings()
-    register_optional_tools(settings)
-    return mcp
-
-
 def main() -> None:
     """Main entry point for the QA-MCP server."""
     parser = argparse.ArgumentParser(
@@ -688,7 +682,10 @@ def main() -> None:
     args = parser.parse_args()
 
     try:
-        settings = get_settings()
+        # The process entry point defines the configuration, so read the
+        # environment now rather than trusting whatever an earlier import may
+        # already have cached.
+        settings = reload_settings()
     except Exception as exc:  # configuration errors must be readable, not a traceback
         parser.exit(2, f"Yapılandırma hatası:\n{exc}\n")
 

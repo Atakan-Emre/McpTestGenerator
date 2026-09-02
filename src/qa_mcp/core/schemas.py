@@ -11,12 +11,6 @@ from typing import Any
 
 from qa_mcp.core.results import RESULT_MODELS
 
-
-def output_schema_for(tool_name: str) -> dict[str, Any]:
-    """The published result schema for one tool."""
-    return RESULT_MODELS[tool_name].model_json_schema()
-
-
 OUTPUT_SCHEMAS: dict[str, dict[str, Any]] = {
     name: model.model_json_schema() for name, model in RESULT_MODELS.items()
 }

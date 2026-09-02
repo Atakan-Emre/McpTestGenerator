@@ -6,7 +6,7 @@ This document describes the release process for the `qa-mcp` Python package and 
 
 QA-MCP uses a tag-driven release flow.
 
-Pushing a semantic version tag such as `v1.0.4` triggers:
+Pushing a semantic version tag such as `v2.0.0` triggers:
 
 - Docker image build and publish to Docker Hub
 - GitHub release creation
@@ -33,14 +33,17 @@ At minimum, align the version across:
 - `pyproject.toml`
 - `src/qa_mcp/__init__.py`
 - `Dockerfile`
-- `docker-compose.yml` if image defaults are version-pinned
-- `CHANGELOG.md`
-- any release-oriented documentation that explicitly mentions the current stable version
+- `docker-compose.yml` (the `${VERSION:-...}` image defaults)
+- `DOCKERHUB.md` (the "Current stable release" row)
+- `CHANGELOG.md` (a new heading; the newest entry must match the package version)
+
+`tests/test_ci_config.py::TestVersionConsistency` asserts all of these agree, so
+a missed file fails a test rather than shipping a mismatched release.
 
 Example:
 
 ```toml
-version = "1.0.4"
+version = "2.0.0"
 ```
 
 ### 2. Verify the package locally
@@ -50,23 +53,23 @@ uv run --extra dev pytest -q
 uv run --extra dev ruff check .
 uv run --extra dev mypy src
 uv run qa-mcp --version
-docker build -t qa-mcp:1.0.4 .
-docker run --rm qa-mcp:1.0.4 --version
+docker build -t qa-mcp:2.0.0 .
+docker run --rm qa-mcp:2.0.0 --version
 ```
 
 ### 3. Commit and push `main`
 
 ```bash
 git add .
-git commit -m "chore: prepare 1.0.4 release"
+git commit -m "chore: prepare 2.0.0 release"
 git push origin main
 ```
 
 ### 4. Create and push the release tag
 
 ```bash
-git tag -a v1.0.4 -m "QA-MCP v1.0.4"
-git push origin v1.0.4
+git tag -a v2.0.0 -m "QA-MCP v2.0.0"
+git push origin v2.0.0
 ```
 
 That tag push is what starts the release automation.
@@ -82,7 +85,7 @@ Triggered by:
 Responsibilities:
 
 - Build and push multi-arch Docker images
-- Publish semver Docker tags such as `1.0.4`, `1.0`, `1`, and `latest`
+- Publish semver Docker tags such as `2.0.0`, `2.0`, `2`, and `latest`
 - Create the GitHub release page
 
 ### Publish to PyPI workflow
@@ -134,8 +137,8 @@ If the tag points to the wrong commit, delete the tag locally and remotely, recr
 If the tag has not been consumed externally yet:
 
 ```bash
-git tag -d v1.0.4
-git push origin :refs/tags/v1.0.4
+git tag -d v2.0.0
+git push origin :refs/tags/v2.0.0
 ```
 
 Then fix the versioned files, recommit if necessary, recreate the tag, and push again.
