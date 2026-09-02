@@ -22,11 +22,43 @@ XRAY_TEST_TYPE_MAP = {
     "Generic": "Generic",
 }
 
+# Fields written to first-class Xray/Jira fields.
+MAPPED_BASE_FIELDS = frozenset(
+    {
+        "title",
+        "description",
+        "test_type",
+        "priority",
+        "labels",
+        "tags",
+        "module",
+        "steps",
+        "preconditions",
+    }
+)
+
+# Fields that have no Xray equivalent but are rendered into the description body
+# by _build_xray_description, so no information is lost.
+DESCRIPTION_EMBEDDED_FIELDS = frozenset(
+    {
+        "expected_result",
+        "scenario_type",
+        "risk_level",
+        "feature",
+        "requirements",
+        "estimated_duration_minutes",
+        "test_data",
+    }
+)
+
+# Bookkeeping fields that Jira owns itself.
+IGNORED_FIELDS = frozenset({"id", "created_at", "updated_at", "author"})
+
 
 def convert_to_xray(
     testcase: dict,
     project_key: str,
-    test_type: str = "Manual",
+    test_type: str | None = None,
     include_custom_fields: bool = True,
     custom_field_mappings: dict[str, str] | None = None,
 ) -> dict:
@@ -36,7 +68,8 @@ def convert_to_xray(
     Args:
         testcase: Test case in QA-MCP standard format
         project_key: Jira project key (e.g., 'PROJ')
-        test_type: Xray test type - 'Manual', 'Automated', 'Generic'
+        test_type: Xray test type - 'Manual', 'Automated', 'Generic'.
+            Defaults to the test case's own ``test_type``.
         include_custom_fields: Whether to include custom field mappings
         custom_field_mappings: Custom field ID mappings (e.g., {'risk_level': 'customfield_10001'})
 
@@ -49,6 +82,7 @@ def convert_to_xray(
     warnings: list[str] = []
     field_mapping_report: dict[str, list[str]] = {
         "mapped_fields": [],
+        "embedded_in_description": [],
         "unmapped_fields": [],
         "custom_fields_used": [],
     }
@@ -65,8 +99,9 @@ def convert_to_xray(
         }
 
     # Build Xray payload
+    effective_test_type = test_type or (tc.test_type.value if tc.test_type else "Manual")
     xray_payload: dict[str, Any] = {
-        "testtype": XRAY_TEST_TYPE_MAP.get(test_type, "Manual"),
+        "testtype": XRAY_TEST_TYPE_MAP.get(effective_test_type, "Manual"),
         "fields": {
             "project": {"key": project_key},
             "summary": tc.title,
@@ -74,7 +109,7 @@ def convert_to_xray(
             "issuetype": {"name": "Test"},
         },
     }
-    field_mapping_report["mapped_fields"].extend(["title", "description"])
+    field_mapping_report["mapped_fields"].extend(["title", "description", "test_type"])
 
     # Priority mapping
     if tc.priority:
@@ -111,31 +146,23 @@ def convert_to_xray(
             xray_payload["fields"].update(custom_fields)
             field_mapping_report["custom_fields_used"] = list(custom_fields.keys())
 
-    # Track unmapped fields
+    # Track how every remaining field was handled. Fields that _build_xray_description
+    # writes into the description are reported as embedded, not as unmapped: they
+    # always carry a value (enums have defaults), so reporting them as losses
+    # produced a warning on literally every conversion.
     all_tc_fields = set(TestCase.model_fields.keys())
-    mapped_base_fields = {
-        "title",
-        "description",
-        "priority",
-        "labels",
-        "tags",
-        "module",
-        "steps",
-        "preconditions",
-    }
-    unmapped = (
-        all_tc_fields
-        - mapped_base_fields
-        - mapped_custom_qa_fields
-        - {"id", "created_at", "updated_at", "author"}
-    )
-
-    for field in unmapped:
+    for field in sorted(
+        all_tc_fields - MAPPED_BASE_FIELDS - IGNORED_FIELDS - mapped_custom_qa_fields
+    ):
         value = getattr(tc, field, None)
-        if value and (not isinstance(value, list) or value):
+        if not value:
+            continue
+        if field in DESCRIPTION_EMBEDDED_FIELDS:
+            field_mapping_report["embedded_in_description"].append(field)
+        else:
             field_mapping_report["unmapped_fields"].append(field)
             warnings.append(
-                f"'{field}' alanı Xray'e map edilemedi - custom field ekleyin veya description'a dahil edildi"
+                f"'{field}' alanı Xray'e map edilemedi - custom field ekleyin veya issue link kullanın"
             )
 
     return {
@@ -148,7 +175,7 @@ def convert_to_xray(
 def convert_batch_to_xray(
     testcases: list[dict],
     project_key: str,
-    test_type: str = "Manual",
+    test_type: str | None = None,
     include_custom_fields: bool = True,
     custom_field_mappings: dict[str, str] | None = None,
 ) -> dict:
@@ -210,8 +237,20 @@ def convert_batch_to_xray(
 
 
 def _build_xray_description(tc: TestCase) -> str:
-    """Build Xray-compatible description field."""
+    """Build Xray-compatible description field.
+
+    Xray has no field for the test case's overall expected result, so it is
+    rendered here. Dropping it silently used to lose the single most important
+    assertion of the test case.
+    """
     parts = [tc.description]
+
+    if tc.expected_result:
+        parts.append("\n\n*Beklenen Sonuç:*")
+        parts.append(tc.expected_result)
+
+    if tc.feature:
+        parts.append(f"\n*Feature:* {tc.feature}")
 
     # Add structured information
     parts.append("\n\n*Test Bilgileri:*")

@@ -299,4 +299,30 @@ SUITE_RULES = {
             "Business-critical paths",
         ],
     },
+    "integration": {
+        "description": "Contract and data-flow tests between components or systems",
+        "max_duration_minutes": 90,
+        "priority_filter": ["P0", "P1", "P2"],
+        "risk_filter": ["critical", "high", "medium"],
+        "max_tests": 80,
+        "selection_criteria": [
+            "Service-to-service contracts",
+            "Third-party integrations",
+            "Message queue and event flows",
+            "Database interaction boundaries",
+        ],
+    },
+    "performance": {
+        "description": "Non-functional tests for latency, throughput, and resource use",
+        "max_duration_minutes": 180,
+        "priority_filter": ["P0", "P1", "P2"],
+        "risk_filter": ["critical", "high"],
+        "max_tests": 40,
+        "selection_criteria": [
+            "Response time under expected load",
+            "Throughput at peak concurrency",
+            "Resource consumption and leaks",
+            "Degradation beyond capacity",
+        ],
+    },
 }

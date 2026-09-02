@@ -55,6 +55,11 @@ pre-commit install
 
 ### Run all tests
 
+> **Shortcut:** every check below is also a Make target, and those are exactly
+> what the Jenkins pipeline runs. `make help` lists them; `make ci` runs the
+> full gate (lint, format, types, tests, security) and writes machine-readable
+> reports into `reports/`. See [docs/CI-CD.md](docs/CI-CD.md).
+
 ```bash
 pytest tests/ -v
 ```

@@ -118,11 +118,26 @@ def generate_testcase(
     suggestions.extend(_analyze_feature_suggestions(feature, acceptance_criteria))
 
     return {
-        "testcases": [tc.model_dump() for tc in testcases],
+        "testcases": [tc.model_dump(mode="json") for tc in testcases],
         "suggestions": suggestions,
         "coverage_summary": coverage,
         "total_generated": len(testcases),
     }
+
+
+# The QA-MCP standard bounds titles at 10-200 characters.
+_MIN_TITLE_LENGTH = 10
+_MAX_TITLE_LENGTH = 200
+
+
+def _fit_title(title: str) -> str:
+    """Clamp a generated title into the range the standard allows."""
+    title = title.strip()
+    if len(title) > _MAX_TITLE_LENGTH:
+        return title[: _MAX_TITLE_LENGTH - 3] + "..."
+    if len(title) < _MIN_TITLE_LENGTH:
+        return f"{title} - test senaryosu"[:_MAX_TITLE_LENGTH]
+    return title
 
 
 def _generate_positive_testcase(
@@ -137,10 +152,10 @@ def _generate_positive_testcase(
 ) -> TestCase:
     """Generate a positive test case for an acceptance criterion."""
 
-    # Generate descriptive title
-    title = f"{feature} - {_extract_key_action(criterion)}"
-    if len(title) > 200:
-        title = title[:197] + "..."
+    # Generate descriptive title. Short feature/criterion pairs used to produce
+    # a title below the standard's 10-character minimum, which failed validation
+    # and took the whole generate call down with it.
+    title = _fit_title(f"{feature} - {_extract_key_action(criterion)}")
 
     # Generate steps from criterion
     steps = _criterion_to_steps(criterion, criterion_number)
@@ -199,7 +214,7 @@ def _generate_negative_testcases(
         for pattern in patterns[:3]:  # Limit to top 3
             tc = TestCase(
                 id=f"TC-{uuid.uuid4().hex[:8].upper()}",
-                title=f"{feature} - Negatif: {pattern}",
+                title=_fit_title(f"{feature} - Negatif: {pattern}"),
                 description=f"Bu test, '{feature}' özelliğinin '{pattern}' durumunda nasıl davrandığını doğrular.",
                 module=module,
                 feature=feature,
@@ -241,7 +256,7 @@ def _generate_negative_testcases(
         for pattern in patterns[:2]:  # Limit to top 2
             tc = TestCase(
                 id=f"TC-{uuid.uuid4().hex[:8].upper()}",
-                title=f"{feature} - Güvenlik: {pattern}",
+                title=_fit_title(f"{feature} - Güvenlik: {pattern}"),
                 description=f"Bu test, kimlik doğrulama sisteminin '{pattern}' durumunda güvenli davrandığını doğrular.",
                 module=module,
                 feature=feature,
@@ -277,7 +292,7 @@ def _generate_negative_testcases(
     for pattern in error_patterns[:2]:  # Add general error handling
         tc = TestCase(
             id=f"TC-{uuid.uuid4().hex[:8].upper()}",
-            title=f"{feature} - Hata Durumu: {pattern}",
+            title=_fit_title(f"{feature} - Hata Durumu: {pattern}"),
             description=f"Bu test, '{feature}' özelliğinin '{pattern}' hata durumunda nasıl davrandığını doğrular.",
             module=module,
             feature=feature,

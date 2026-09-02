@@ -51,6 +51,12 @@ docs/_build/
 
 # CI/CD
 .github/
+Jenkinsfile
+Makefile
+sonar-project.properties
+reports/
+.scannerwork/
+.pre-commit-config.yaml
 
 # Docker
 Dockerfile*

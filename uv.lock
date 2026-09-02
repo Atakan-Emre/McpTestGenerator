@@ -1032,7 +1032,7 @@ wheels = [
 
 [[package]]
 name = "qa-mcp"
-version = "1.0.4"
+version = "1.0.5"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },
@@ -1059,7 +1059,7 @@ jira = [
 requires-dist = [
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "jira", marker = "extra == 'jira'", specifier = ">=3.8.0" },
-    { name = "mcp", specifier = ">=1.0.0" },
+    { name = "mcp", specifier = ">=1.9.0,<2.0.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10.0" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.5.0" },
     { name = "pydantic", specifier = ">=2.0.0" },

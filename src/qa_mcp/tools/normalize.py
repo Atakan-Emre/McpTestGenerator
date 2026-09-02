@@ -8,12 +8,15 @@ import re
 import uuid
 from datetime import datetime
 
+from pydantic import ValidationError
+
 from qa_mcp.core.models import (
     Priority,
     RiskLevel,
     ScenarioType,
     TestCase,
-    TestStep,
+    TestCaseDraft,
+    TestStepDraft,
 )
 
 
@@ -84,12 +87,109 @@ def normalize_testcase(
     testcase = _normalize_values(testcase)
     transformations.append("Değerler standartlaştırıldı")
 
+    # Raise the draft to the standard, padding anything the source left short.
+    try:
+        standard_testcase, promote_warnings = _promote_to_standard(testcase)
+    except Exception as e:
+        return {
+            "testcase": None,
+            "source_format_detected": source_format,
+            "transformations": transformations,
+            "warnings": [*warnings, f"Standarda yükseltme hatası: {str(e)}"],
+            "error": str(e),
+        }
+    warnings.extend(promote_warnings)
+    transformations.append("QA-MCP standardına yükseltildi")
+
     return {
-        "testcase": testcase.model_dump(),
+        "testcase": standard_testcase.model_dump(mode="json"),
         "source_format_detected": source_format,
         "transformations": transformations,
         "warnings": warnings,
     }
+
+
+# Minimum lengths the QA-MCP standard requires. Imported content routinely falls
+# short of them, and a normalizer that answers with a validation error instead of
+# a usable draft is useless to the caller.
+_MIN_TITLE = 10
+_MAX_TITLE = 200
+_MIN_DESCRIPTION = 20
+_MIN_EXPECTED = 10
+_MIN_STEP_TEXT = 5
+
+_PLACEHOLDER_ACTION = "[Adım tanımlanmalı]"
+_PLACEHOLDER_EXPECTED = "[Beklenen sonuç belirtilmeli]"
+
+
+def _promote_to_standard(draft: TestCaseDraft) -> tuple[TestCase, list[str]]:
+    """Raise a parsed draft to a standard-conforming ``TestCase``.
+
+    Every parser produces a permissive draft; this is the single place where
+    short or missing content is padded so the result always validates. Each
+    adjustment is reported, so the caller knows what was filled in rather than
+    silently trusting generated text.
+    """
+    warnings: list[str] = []
+    data = draft.model_dump(mode="json")
+
+    title = str(data.get("title") or "").strip()
+    if not title:
+        title = "İçe aktarılan test case"
+        warnings.append("Başlık bulunamadı, varsayılan başlık kullanıldı")
+    if len(title) < _MIN_TITLE:
+        title = f"İçe aktarılan test case: {title}"
+        warnings.append(f"Başlık {_MIN_TITLE} karakterden kısaydı, açıklayıcı önek eklendi")
+    if len(title) > _MAX_TITLE:
+        title = title[: _MAX_TITLE - 3] + "..."
+        warnings.append(f"Başlık {_MAX_TITLE} karakterden uzundu, kısaltıldı")
+    data["title"] = title
+
+    description = str(data.get("description") or "").strip()
+    if len(description) < _MIN_DESCRIPTION:
+        description = (
+            f"{description} — '{title}' için içe aktarılan test case, "
+            "manuel gözden geçirme önerilir"
+        ).strip(" —")
+        warnings.append(
+            f"Açıklama {_MIN_DESCRIPTION} karakterden kısaydı, bağlam bilgisiyle tamamlandı"
+        )
+    data["description"] = description
+
+    steps = data.get("steps") or []
+    if not steps:
+        steps = [
+            {
+                "step_number": 1,
+                "action": _PLACEHOLDER_ACTION,
+                "expected_result": _PLACEHOLDER_EXPECTED,
+            }
+        ]
+        warnings.append("Test adımı bulunamadı, doldurulması gereken placeholder adım eklendi")
+    for index, step in enumerate(steps, 1):
+        step["step_number"] = step.get("step_number") or index
+        if len(str(step.get("action") or "").strip()) < _MIN_STEP_TEXT:
+            step["action"] = f"{_PLACEHOLDER_ACTION} {step.get('action') or ''}".strip()
+        if len(str(step.get("expected_result") or "").strip()) < _MIN_STEP_TEXT:
+            step["expected_result"] = (
+                f"{_PLACEHOLDER_EXPECTED} {step.get('expected_result') or ''}".strip()
+            )
+    data["steps"] = steps
+
+    expected = str(data.get("expected_result") or "").strip()
+    if len(expected) < _MIN_EXPECTED:
+        expected = f"{_PLACEHOLDER_EXPECTED} {expected}".strip()
+        warnings.append(
+            f"Genel beklenen sonuç {_MIN_EXPECTED} karakterden kısaydı, placeholder ile tamamlandı"
+        )
+    data["expected_result"] = expected
+
+    duration = data.get("estimated_duration_minutes")
+    if isinstance(duration, int) and not 1 <= duration <= 480:
+        warnings.append(f"Tahmini süre ({duration} dk) 1-480 aralığı dışında, kaldırıldı")
+        data["estimated_duration_minutes"] = None
+
+    return TestCase(**data), warnings
 
 
 def _detect_format(input_data: str | dict) -> str:
@@ -111,7 +211,7 @@ def _detect_format(input_data: str | dict) -> str:
     return "plain"
 
 
-def _parse_gherkin(input_data: str) -> tuple[TestCase, list[str]]:
+def _parse_gherkin(input_data: str) -> tuple[TestCaseDraft, list[str]]:
     """Parse Gherkin format test case."""
     warnings: list[str] = []
     text = str(input_data).strip()
@@ -119,7 +219,7 @@ def _parse_gherkin(input_data: str) -> tuple[TestCase, list[str]]:
 
     title = ""
     description = ""
-    steps: list[TestStep] = []
+    steps: list[TestStepDraft] = []
     preconditions: list[str] = []
     step_number = 0
     current_actions: list[str] = []
@@ -133,7 +233,7 @@ def _parse_gherkin(input_data: str) -> tuple[TestCase, list[str]]:
 
         step_number += 1
         steps.append(
-            TestStep(
+            TestStepDraft(
                 step_number=step_number,
                 action="; ".join(current_actions),
                 expected_result="; ".join(current_expectations) or "[Beklenen sonuç belirtilmeli]",
@@ -187,7 +287,7 @@ def _parse_gherkin(input_data: str) -> tuple[TestCase, list[str]]:
     if not steps:
         warnings.append("Test adımları çıkarılamadı")
         steps = [
-            TestStep(
+            TestStepDraft(
                 step_number=1,
                 action="[Gherkin'den çevrilecek - adım tanımlanmalı]",
                 expected_result="[Gherkin'den çevrilecek - sonuç tanımlanmalı]",
@@ -205,7 +305,7 @@ def _parse_gherkin(input_data: str) -> tuple[TestCase, list[str]]:
     if len(expected) < 10:
         expected = f"Senaryo sonucu: {expected}"
 
-    tc = TestCase(
+    tc = TestCaseDraft(
         id=f"TC-{uuid.uuid4().hex[:8].upper()}",
         title=title,
         description=description,
@@ -218,7 +318,7 @@ def _parse_gherkin(input_data: str) -> tuple[TestCase, list[str]]:
     return tc, warnings
 
 
-def _parse_markdown(input_data: str) -> tuple[TestCase, list[str]]:
+def _parse_markdown(input_data: str) -> tuple[TestCaseDraft, list[str]]:
     """Parse Markdown format test case."""
     warnings = []
     text = str(input_data).strip()
@@ -258,7 +358,7 @@ def _parse_markdown(input_data: str) -> tuple[TestCase, list[str]]:
                 if " -> " in content:
                     parts = content.split(" -> ")
                     steps.append(
-                        TestStep(
+                        TestStepDraft(
                             step_number=step_number,
                             action=parts[0].strip(),
                             expected_result=parts[1].strip()
@@ -268,7 +368,7 @@ def _parse_markdown(input_data: str) -> tuple[TestCase, list[str]]:
                     )
                 else:
                     steps.append(
-                        TestStep(
+                        TestStepDraft(
                             step_number=step_number,
                             action=content,
                             expected_result="[Beklenen sonuç belirtilmeli]",
@@ -286,14 +386,14 @@ def _parse_markdown(input_data: str) -> tuple[TestCase, list[str]]:
     if not steps:
         warnings.append("Test adımları çıkarılamadı")
         steps = [
-            TestStep(
+            TestStepDraft(
                 step_number=1,
                 action="[Markdown'dan çevrilecek]",
                 expected_result="[Markdown'dan çevrilecek]",
             )
         ]
 
-    tc = TestCase(
+    tc = TestCaseDraft(
         id=f"TC-{uuid.uuid4().hex[:8].upper()}",
         title=title,
         description=description.strip() or f"Markdown'dan dönüştürüldü: {title}",
@@ -306,7 +406,7 @@ def _parse_markdown(input_data: str) -> tuple[TestCase, list[str]]:
     return tc, warnings
 
 
-def _parse_json(input_data: str | dict) -> tuple[TestCase, list[str]]:
+def _parse_json(input_data: str | dict) -> tuple[TestCaseDraft, list[str]]:
     """Parse JSON/dict format test case."""
     warnings: list[str] = []
 
@@ -317,11 +417,13 @@ def _parse_json(input_data: str | dict) -> tuple[TestCase, list[str]]:
     else:
         data = input_data
 
-    # Try direct parsing first
+    # Try direct parsing first: input that already conforms to the standard
+    # needs no field remapping.
     try:
-        tc = TestCase(**data)
-        return tc, warnings
-    except Exception:
+        conforming: TestCaseDraft = TestCase(**data)
+        return conforming, warnings
+    except ValidationError:
+        # Not already standard-conforming; fall through to field remapping.
         pass
 
     # Manual field mapping for non-standard formats
@@ -341,7 +443,7 @@ def _parse_json(input_data: str | dict) -> tuple[TestCase, list[str]]:
     for idx, step in enumerate(raw_steps, 1):
         if isinstance(step, dict):
             steps.append(
-                TestStep(
+                TestStepDraft(
                     step_number=idx,
                     action=step.get("action") or step.get("step") or str(step),
                     expected_result=step.get("expected_result")
@@ -351,7 +453,7 @@ def _parse_json(input_data: str | dict) -> tuple[TestCase, list[str]]:
             )
         elif isinstance(step, str):
             steps.append(
-                TestStep(
+                TestStepDraft(
                     step_number=idx,
                     action=step,
                     expected_result="[Beklenen sonuç belirtilmeli]",
@@ -360,7 +462,7 @@ def _parse_json(input_data: str | dict) -> tuple[TestCase, list[str]]:
 
     if not steps:
         steps = [
-            TestStep(
+            TestStepDraft(
                 step_number=1,
                 action="[Adım belirtilmeli]",
                 expected_result="[Beklenen sonuç belirtilmeli]",
@@ -384,7 +486,7 @@ def _parse_json(input_data: str | dict) -> tuple[TestCase, list[str]]:
     if not tags:
         tags = ["json-import"]
 
-    tc = TestCase(
+    tc = TestCaseDraft(
         id=data.get("id") or f"TC-{uuid.uuid4().hex[:8].upper()}",
         title=title,
         description=description,
@@ -414,7 +516,7 @@ def _parse_json(input_data: str | dict) -> tuple[TestCase, list[str]]:
     return tc, warnings
 
 
-def _parse_plain_text(input_data: str) -> tuple[TestCase, list[str]]:
+def _parse_plain_text(input_data: str) -> tuple[TestCaseDraft, list[str]]:
     """Parse plain text format test case."""
     warnings = []
     text = str(input_data).strip()
@@ -441,7 +543,7 @@ def _parse_plain_text(input_data: str) -> tuple[TestCase, list[str]]:
             step_num = int(match.group(1))
             action = match.group(2)
             steps.append(
-                TestStep(
+                TestStepDraft(
                     step_number=step_num,
                     action=action,
                     expected_result="[Beklenen sonuç belirtilmeli]",
@@ -453,14 +555,14 @@ def _parse_plain_text(input_data: str) -> tuple[TestCase, list[str]]:
             "Numaralandırılmış adımlar bulunamadı, tüm metin açıklama olarak kullanıldı"
         )
         steps = [
-            TestStep(
+            TestStepDraft(
                 step_number=1,
                 action=description[:200] if len(description) > 200 else description,
                 expected_result="[Beklenen sonuç belirtilmeli]",
             )
         ]
 
-    tc = TestCase(
+    tc = TestCaseDraft(
         id=f"TC-{uuid.uuid4().hex[:8].upper()}",
         title=title[:200] if len(title) > 200 else title,
         description=description,
@@ -475,7 +577,7 @@ def _parse_plain_text(input_data: str) -> tuple[TestCase, list[str]]:
     return tc, warnings
 
 
-def _fill_missing_fields(tc: TestCase) -> tuple[TestCase, list[str]]:
+def _fill_missing_fields(tc: TestCaseDraft) -> tuple[TestCaseDraft, list[str]]:
     """Fill missing fields with defaults."""
     warnings: list[str] = []
 
@@ -502,7 +604,7 @@ def _fill_missing_fields(tc: TestCase) -> tuple[TestCase, list[str]]:
     return tc, warnings
 
 
-def _normalize_values(tc: TestCase) -> TestCase:
+def _normalize_values(tc: TestCaseDraft) -> TestCaseDraft:
     """Normalize field values."""
     # Trim whitespace
     tc.title = tc.title.strip()

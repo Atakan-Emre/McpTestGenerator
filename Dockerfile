@@ -5,7 +5,7 @@ FROM python:3.11-slim AS base
 
 LABEL org.opencontainers.image.title="QA-MCP"
 LABEL org.opencontainers.image.description="Test Standardization & Orchestration MCP Server"
-LABEL org.opencontainers.image.version="1.0.4"
+LABEL org.opencontainers.image.version="1.1.0"
 LABEL org.opencontainers.image.authors="Atakan Emre"
 LABEL org.opencontainers.image.source="https://github.com/Atakan-Emre/McpTestGenerator"
 LABEL org.opencontainers.image.licenses="MIT"
@@ -16,7 +16,6 @@ RUN pip install --no-cache-dir --upgrade pip
 
 COPY pyproject.toml README.md ./
 COPY src/ ./src/
-COPY resources/ ./resources/
 
 RUN pip install --no-cache-dir .
 

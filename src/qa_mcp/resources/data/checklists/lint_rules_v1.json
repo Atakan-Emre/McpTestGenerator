@@ -1,0 +1,301 @@
+{
+  "version": "1.0",
+  "name": "QA-MCP Lint Kuralları",
+  "description": "Test case kalite kontrol kuralları ve puanlama sistemi",
+  "minimum_passing_score": 60,
+  "max_score": 100,
+  "rules": [
+    {
+      "id": "classification.module",
+      "category": "classification",
+      "severity": "info",
+      "description": "Modül/bileşen belirtilmeli",
+      "penalty": 0,
+      "fix_suggestion": "Test edilen modülü/bileşeni belirtin"
+    },
+    {
+      "id": "duration.recommended",
+      "category": "classification",
+      "severity": "info",
+      "description": "Tahmini çalışma süresi belirtilmeli",
+      "penalty": 0,
+      "fix_suggestion": "Tahmini çalışma süresi ekleyin (planlama için kullanışlı)"
+    },
+    {
+      "id": "labels.recommended",
+      "category": "classification",
+      "severity": "info",
+      "description": "Suite label'ları önerilir",
+      "penalty": 0,
+      "fix_suggestion": "Suite label'ları ekleyin (smoke, regression, e2e, vb.)"
+    },
+    {
+      "id": "tags.recommended",
+      "category": "classification",
+      "severity": "info",
+      "description": "Tag'ler kategorize etmek için önerilir",
+      "penalty": 3,
+      "fix_suggestion": "Kategorize etmek için tag'ler ekleyin (örn: 'api', 'auth', 'payment')"
+    },
+    {
+      "id": "description.min_length",
+      "category": "description",
+      "severity": "error",
+      "description": "Açıklama minimum 20 karakter olmalı",
+      "penalty": 10,
+      "fix_suggestion": "Test'in amacını, kapsamını ve bağlamını açıklayan detaylı bir açıklama ekleyin"
+    },
+    {
+      "id": "description.not_duplicate_title",
+      "category": "description",
+      "severity": "warning",
+      "description": "Açıklama başlıktan farklı olmalı",
+      "penalty": 5,
+      "fix_suggestion": "Test senaryosunun bağlamını, kapsamını ve önemini açıklayan ek bilgiler ekleyin"
+    },
+    {
+      "id": "expected_result.measurable",
+      "category": "expected_result",
+      "severity": "info",
+      "description": "Expected result ölçülebilir kriterler içermeli",
+      "penalty": 0,
+      "measurable_indicators": [
+        "should",
+        "must",
+        "will",
+        "displays",
+        "returns",
+        "contains"
+      ],
+      "fix_suggestion": "Beklenen sonuca ölçülebilir kriterler ekleyin"
+    },
+    {
+      "id": "expected_result.min_length",
+      "category": "expected_result",
+      "severity": "error",
+      "description": "Genel expected result minimum 10 karakter olmalı",
+      "penalty": 10,
+      "fix_suggestion": "Test'in başarılı kabul edilmesi için gereken koşulları detaylı açıklayın"
+    },
+    {
+      "id": "preconditions.required",
+      "category": "preconditions",
+      "severity": "error",
+      "description": "En az bir ön koşul tanımlanmalı",
+      "penalty": 15,
+      "fix_suggestion": "Test'in çalışması için gerekli başlangıç durumlarını listeleyin"
+    },
+    {
+      "id": "preconditions.specific",
+      "category": "preconditions",
+      "severity": "info",
+      "description": "Ön koşullar spesifik olmalı, belirsiz terimlerden kaçınılmalı",
+      "penalty": 0,
+      "vague_terms": [
+        "configured",
+        "set up",
+        "ready",
+        "available",
+        "hazır",
+        "kurulu"
+      ],
+      "fix_suggestion": "Daha spesifik detaylar ekleyin"
+    },
+    {
+      "id": "step.action.min_length",
+      "category": "steps",
+      "severity": "warning",
+      "description": "Adım action'ı minimum 10 karakter olmalı",
+      "min_length": 10,
+      "penalty": 3,
+      "fix_suggestion": "Action'da ne yapılacağını net olarak açıklayın"
+    },
+    {
+      "id": "step.expected.min_length",
+      "category": "steps",
+      "severity": "warning",
+      "description": "Adım expected result'ı minimum 10 karakter olmalı",
+      "min_length": 10,
+      "penalty": 3,
+      "fix_suggestion": "Doğrulanabilir, spesifik beklenen sonuç yazın"
+    },
+    {
+      "id": "step.expected.specific",
+      "category": "steps",
+      "severity": "info",
+      "description": "Expected result spesifik ve doğrulanabilir olmalı",
+      "penalty": 0,
+      "vague_terms": [
+        "works",
+        "correct",
+        "proper",
+        "çalışır",
+        "doğru",
+        "uygun"
+      ],
+      "fix_suggestion": "'Çalışır' yerine spesifik olun: 'HTTP 200 döner ve response body {expected} içerir'"
+    },
+    {
+      "id": "steps.max_count",
+      "category": "steps",
+      "severity": "warning",
+      "description": "Test adımları 15'i geçmemeli",
+      "max_steps": 15,
+      "penalty": 5,
+      "fix_suggestion": "Test case'i daha küçük, odaklı test'lere ayırmayı düşünün"
+    },
+    {
+      "id": "steps.required",
+      "category": "steps",
+      "severity": "error",
+      "description": "En az bir test adımı tanımlanmalı",
+      "penalty": 20,
+      "fix_suggestion": "Net action ve expected result içeren adımlar ekleyin"
+    },
+    {
+      "id": "test_data.boundary_values",
+      "category": "test_data",
+      "severity": "info",
+      "description": "Numeric data için boundary değerler önerilir",
+      "penalty": 0,
+      "fix_suggestion": "Numeric data için boundary değerler (min, max, sınır) eklemeyi düşünün"
+    },
+    {
+      "id": "test_data.hardcoded_credentials",
+      "category": "test_data",
+      "severity": "error",
+      "description": "Test akışında credential görünümlü sabit değer bulunmamalı",
+      "penalty": 20,
+      "fix_suggestion": "Credential'ları test case'den çıkarın; test_data'da adlandırın ve değeri environment variable'dan alın (örn: ${TEST_USER_PASSWORD})"
+    },
+    {
+      "id": "test_data.hardcoded_identity",
+      "category": "test_data",
+      "severity": "warning",
+      "description": "Test akışındaki kimlik bilgileri (email vb.) test_data'da tanımlanmış olmalı",
+      "penalty": 6,
+      "fix_suggestion": "Değeri test_data'da tanımlayın ve adımda adıyla referans verin; test tek bir hesaba bağlı kalmasın"
+    },
+    {
+      "id": "test_data.not_parameterized",
+      "category": "test_data",
+      "severity": "warning",
+      "description": "Sabit değer içeren adımlar için test_data tanımlanmış olmalı",
+      "penalty": 6,
+      "fix_suggestion": "Sabit değerleri test_data olarak çıkarın; aynı test farklı veri setleriyle çalıştırılabilsin"
+    },
+    {
+      "id": "test_data.recommended",
+      "category": "test_data",
+      "severity": "warning",
+      "description": "Data girişi içeren adımlar için test_data tanımlanmalı",
+      "penalty": 5,
+      "data_indicators": [
+        "input",
+        "enter",
+        "type",
+        "value",
+        "gir",
+        "yaz",
+        "değer"
+      ],
+      "fix_suggestion": "Test data'yı açıkça tanımlayın (boundary değerler, negatif cases dahil)"
+    },
+    {
+      "id": "test_data.scenario_mismatch",
+      "category": "test_data",
+      "severity": "info",
+      "description": "Test data ve scenario type uyumlu olmalı",
+      "penalty": 0,
+      "fix_suggestion": "Scenario type'ı kontrol edin veya ayrı negatif test case oluşturun"
+    },
+    {
+      "id": "title.has_action_verb",
+      "category": "title",
+      "severity": "info",
+      "description": "Başlıkta eylem fiili olmalı",
+      "penalty": 0,
+      "fix_suggestion": "Başlığa bir eylem fiili ekleyin (validates, ensures, verifies)"
+    },
+    {
+      "id": "title.max_length",
+      "category": "title",
+      "severity": "warning",
+      "description": "Başlık 200 karakteri geçmemeli",
+      "penalty": 3,
+      "fix_suggestion": "Başlığı kısaltın, detayları description'a taşıyın"
+    },
+    {
+      "id": "title.min_length",
+      "category": "title",
+      "severity": "error",
+      "description": "Başlık minimum 10 karakter olmalı",
+      "penalty": 10,
+      "fix_suggestion": "Neyin test edildiğini açıkça belirten daha açıklayıcı bir başlık yazın"
+    },
+    {
+      "id": "title.no_generic_start",
+      "category": "title",
+      "severity": "warning",
+      "description": "Başlık genel kelimelerle başlamamalı (Test, Check, Verify)",
+      "penalty": 5,
+      "fix_suggestion": "'Test' yerine test edilen özelliği vurgulayın"
+    },
+    {
+      "id": "requirements.recommended",
+      "category": "traceability",
+      "severity": "info",
+      "description": "Traceability için requirement linklerı önerilir",
+      "penalty": 3,
+      "fix_suggestion": "İzlenebilirlik için requirement ID'leri ekleyin"
+    }
+  ],
+  "scoring": {
+    "grades": {
+      "A": {
+        "min": 90,
+        "max": 100,
+        "description": "Mükemmel - Production-ready",
+        "action": "Kullanıma hazır"
+      },
+      "B": {
+        "min": 80,
+        "max": 89,
+        "description": "İyi - Minor iyileştirmeler gerekli",
+        "action": "Küçük düzeltmelerle kullanılabilir"
+      },
+      "C": {
+        "min": 70,
+        "max": 79,
+        "description": "Orta - İyileştirme gerekli",
+        "action": "Review sonrası kullanılabilir"
+      },
+      "D": {
+        "min": 60,
+        "max": 69,
+        "description": "Zayıf - Önemli düzeltmeler gerekli",
+        "action": "Düzeltme sonrası tekrar review"
+      },
+      "F": {
+        "min": 0,
+        "max": 59,
+        "description": "Başarısız - Major düzeltmeler gerekli",
+        "action": "Yeniden yazılmalı"
+      }
+    }
+  },
+  "severity_levels": {
+    "error": {
+      "description": "Mutlaka düzeltilmeli",
+      "impact": "Test case kullanılamaz"
+    },
+    "warning": {
+      "description": "Düzeltilmesi önerilir",
+      "impact": "Kaliteyi düşürür"
+    },
+    "info": {
+      "description": "İyileştirme önerisi",
+      "impact": "Nice to have"
+    }
+  }
+}

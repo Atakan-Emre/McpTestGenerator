@@ -2,6 +2,9 @@
 
 from datetime import datetime
 
+import pytest
+from pydantic import ValidationError
+
 from qa_mcp.core.models import (
     LintResult,
     Priority,
@@ -10,6 +13,9 @@ from qa_mcp.core.models import (
 )
 from qa_mcp.core.models import (
     TestCase as QaTestCase,
+)
+from qa_mcp.core.models import (
+    TestCaseDraft as QaTestCaseDraft,
 )
 from qa_mcp.core.models import (
     TestData as QaTestData,
@@ -143,3 +149,57 @@ class TestLintResultModel:
         )
         assert result.score == 85
         assert result.passed is True
+
+
+class TestTestCaseDraft:
+    """The permissive model the lint engine reads."""
+
+    def test_draft_accepts_a_testcase_that_violates_the_standard(self):
+        """Regression: substandard input must be representable, so it can be linted."""
+        draft = QaTestCaseDraft(
+            title="Login test",
+            description="Login test",
+            preconditions=[],
+            steps=[{"step_number": 1, "action": "Login yap", "expected_result": "Çalışır"}],
+            expected_result="OK",
+        )
+        assert draft.title == "Login test"
+        assert draft.steps[0].action == "Login yap"
+
+    def test_draft_defaults_are_empty_not_missing(self):
+        draft = QaTestCaseDraft()
+        assert draft.title == ""
+        assert draft.description == ""
+        assert draft.steps == []
+        assert draft.expected_result == ""
+
+    def test_strict_testcase_still_enforces_the_standard(self):
+        with pytest.raises(ValidationError):
+            QaTestCase(
+                title="Login test",
+                description="Login test",
+                steps=[],
+                expected_result="OK",
+            )
+
+    def test_testcase_is_a_draft(self):
+        """LintEngine takes a draft; a strict TestCase must satisfy that contract."""
+        assert issubclass(QaTestCase, QaTestCaseDraft)
+
+
+class TestPackagingConstraints:
+    """Guards on dependency metadata."""
+
+    def test_mcp_dependency_has_an_upper_bound(self):
+        """Regression: an unbounded `mcp>=1.0.0` let mcp 2.x break the server on install.
+
+        mcp 2.x removed the decorator-based low-level API this server is built
+        on, so a fresh install resolved to a version that crashed at import.
+        """
+        from importlib.metadata import requires
+
+        mcp_requirements = [r for r in (requires("qa-mcp") or []) if r.startswith("mcp")]
+        assert mcp_requirements, "qa-mcp no longer declares an mcp dependency"
+        assert any("<2" in r for r in mcp_requirements), (
+            f"mcp dependency must pin below 2.0: {mcp_requirements}"
+        )

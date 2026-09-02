@@ -68,27 +68,42 @@ class TestData(BaseModel):
     is_negative: bool = Field(False, description="Is this negative test data?")
 
 
-class TestStep(BaseModel):
-    """Individual test step."""
+class TestStepDraft(BaseModel):
+    """Permissive test step used for linting not-yet-conforming input.
 
-    step_number: int = Field(..., ge=1, description="Step sequence number")
-    action: str = Field(..., min_length=5, description="Action to perform")
-    expected_result: str = Field(..., min_length=5, description="Expected result")
+    Carries no length or range constraints: the lint engine has to be able to
+    read a short or empty step in order to report it as an issue.
+    """
+
+    step_number: int = Field(1, description="Step sequence number")
+    action: str = Field("", description="Action to perform")
+    expected_result: str = Field("", description="Expected result")
     test_data: list[TestData] | None = Field(None, description="Data used in this step")
     notes: str | None = Field(None, description="Additional notes")
 
 
-class TestCase(BaseModel):
-    """
-    Standard test case structure.
+class TestStep(TestStepDraft):
+    """Individual test step conforming to the QA-MCP standard."""
 
-    This is the core data model that all QA-MCP tools work with.
+    step_number: int = Field(..., ge=1, description="Step sequence number")
+    action: str = Field(..., min_length=5, description="Action to perform")
+    expected_result: str = Field(..., min_length=5, description="Expected result")
+
+
+class TestCaseDraft(BaseModel):
+    """
+    Permissive test case structure used for quality analysis.
+
+    ``TestCase`` enforces the QA-MCP standard, which means a test case that
+    violates the standard cannot be constructed at all. That is exactly the
+    input the lint engine exists to analyse, so linting works on this draft
+    model instead: same fields, no length or cardinality constraints.
     """
 
     # Identification
     id: str | None = Field(None, description="Unique identifier")
-    title: str = Field(..., min_length=10, max_length=200, description="Test case title")
-    description: str = Field(..., min_length=20, description="Detailed description")
+    title: str = Field("", description="Test case title")
+    description: str = Field("", description="Detailed description")
 
     # Classification
     module: str | None = Field(None, description="Module/component being tested")
@@ -104,9 +119,7 @@ class TestCase(BaseModel):
     )
 
     # Test execution
-    steps: list[TestStep] = Field(
-        default_factory=list, min_length=1, description="Test steps to execute"
-    )
+    steps: list[TestStepDraft] = Field(default_factory=list, description="Test steps to execute")
 
     # Test data
     test_data: list[TestData] = Field(
@@ -114,14 +127,12 @@ class TestCase(BaseModel):
     )
 
     # Expected outcomes
-    expected_result: str = Field(..., min_length=10, description="Overall expected result")
+    expected_result: str = Field("", description="Overall expected result")
 
     # Metadata
     tags: list[str] = Field(default_factory=list, description="Tags for categorization")
     labels: list[str] = Field(default_factory=list, description="Labels (smoke, regression, etc.)")
-    estimated_duration_minutes: int | None = Field(
-        None, ge=1, le=480, description="Estimated execution time"
-    )
+    estimated_duration_minutes: int | None = Field(None, description="Estimated execution time")
 
     # Traceability
     requirements: list[str] = Field(default_factory=list, description="Linked requirement IDs")
@@ -138,6 +149,29 @@ class TestCase(BaseModel):
             self.created_at = datetime.now()
         if self.updated_at is None:
             self.updated_at = self.created_at
+
+
+class TestCase(TestCaseDraft):
+    """
+    Standard test case structure.
+
+    This is the core data model that all QA-MCP tools work with. It re-declares
+    the draft's fields with the constraints the QA-MCP standard requires, so a
+    successfully constructed ``TestCase`` is by definition standard-conforming.
+    """
+
+    title: str = Field(..., min_length=10, max_length=200, description="Test case title")
+    description: str = Field(..., min_length=20, description="Detailed description")
+    # Deliberate narrowing of the draft's list[TestStepDraft]. Pydantic
+    # re-validates the field, so every element really is a TestStep; mypy only
+    # objects because list is invariant.
+    steps: list[TestStep] = Field(  # type: ignore[assignment]
+        default_factory=list, min_length=1, description="Test steps to execute"
+    )
+    expected_result: str = Field(..., min_length=10, description="Overall expected result")
+    estimated_duration_minutes: int | None = Field(
+        None, ge=1, le=480, description="Estimated execution time"
+    )
 
 
 class LintSeverity(StrEnum):

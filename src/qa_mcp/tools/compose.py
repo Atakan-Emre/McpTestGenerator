@@ -6,6 +6,8 @@ Composes test suites (Smoke, Regression, E2E) from test case collections.
 
 from typing import Any
 
+from pydantic import ValidationError
+
 from qa_mcp.core.models import (
     Priority,
     RiskLevel,
@@ -28,7 +30,8 @@ def compose_suite(
 
     Args:
         testcases: List of test cases in QA-MCP standard format
-        target: Suite type - 'smoke', 'sanity', 'regression', 'e2e'
+        target: Suite type - 'smoke', 'sanity', 'regression', 'e2e',
+            'integration' or 'performance'
         sprint: Sprint name/number for context
         max_duration_minutes: Maximum suite duration (overrides default)
         custom_criteria: Custom selection criteria
@@ -60,9 +63,36 @@ def compose_suite(
             "errors": parse_errors,
         }
 
-    # Get suite rules
-    suite_type = SuiteType(target.lower())
-    rules: dict[str, Any] = SUITE_RULES.get(target.lower(), SUITE_RULES["regression"])
+    # Get suite rules. An unknown target is a caller error, not a crash: report
+    # it with the list of valid targets instead of raising ValueError out of the
+    # tool handler.
+    normalized_target = target.lower().strip()
+    try:
+        suite_type = SuiteType(normalized_target)
+    except ValueError:
+        return {
+            "suite": None,
+            "selection_rationale": [],
+            "coverage_summary": {},
+            "recommendations": [],
+            "errors": [
+                f"Geçersiz suite tipi: '{target}'. "
+                f"Geçerli değerler: {', '.join(sorted(t.value for t in SuiteType))}"
+            ],
+        }
+
+    rules: dict[str, Any] | None = SUITE_RULES.get(normalized_target)
+    if rules is None:
+        return {
+            "suite": None,
+            "selection_rationale": [],
+            "coverage_summary": {},
+            "recommendations": [],
+            "errors": [
+                f"'{normalized_target}' için seçim kuralı tanımlı değil. "
+                f"Kural tanımlı suite tipleri: {', '.join(sorted(SUITE_RULES))}"
+            ],
+        }
 
     # Override max duration if provided
     if max_duration_minutes:
@@ -97,8 +127,8 @@ def compose_suite(
     duration_limit = int(rules.get("max_duration_minutes", 999))
 
     return {
-        "suite": suite.model_dump(),
-        "selected_testcases": [tc.model_dump() for tc in selected],
+        "suite": suite.model_dump(mode="json"),
+        "selected_testcases": [tc.model_dump(mode="json") for tc in selected],
         "excluded_count": len(excluded),
         "selection_rationale": rationale,
         "coverage_summary": coverage_summary,
@@ -343,14 +373,23 @@ def coverage_report(
         - gaps: Identified coverage gaps
         - recommendations: Suggestions for improving coverage
     """
-    # Parse test cases
+    # Parse test cases. Unlike compose_suite, a coverage report is still useful
+    # when some inputs are malformed - but the caller must be told which ones
+    # were left out, otherwise the percentages silently lie.
     parsed_cases: list[TestCase] = []
-    for tc_dict in testcases:
+    skipped: list[dict[str, str]] = []
+    for idx, tc_dict in enumerate(testcases):
         try:
             tc = TestCase(**tc_dict)
             parsed_cases.append(tc)
-        except Exception:
-            continue
+        except ValidationError as exc:
+            skipped.append(
+                {
+                    "index": str(idx),
+                    "testcase_id": str(tc_dict.get("id", "")) if isinstance(tc_dict, dict) else "",
+                    "reason": str(exc).splitlines()[0],
+                }
+            )
 
     # Requirement coverage
     req_coverage: dict[str, list[str]] = {}
@@ -474,8 +513,15 @@ def coverage_report(
             "Test data tanımlı değil. Data-driven testing yaklaşımını uygulayın."
         )
 
+    if skipped:
+        recommendations.append(
+            f"{len(skipped)} test case standarda uymadığı için rapora dahil edilemedi; "
+            "skipped_testcases listesini kontrol edin."
+        )
+
     return {
         "total_testcases": total_tests,
+        "skipped_testcases": skipped,
         "requirement_coverage": req_analysis,
         "requirement_mapping": req_coverage,
         "module_coverage": module_analysis,

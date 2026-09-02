@@ -3,8 +3,9 @@
 import pytest
 
 from qa_mcp.core.lint import LintEngine
-from qa_mcp.core.models import Priority, RiskLevel
+from qa_mcp.core.models import LintSeverity, Priority, RiskLevel
 from qa_mcp.core.models import TestCase as QaTestCase
+from qa_mcp.core.models import TestData as QaTestData
 from qa_mcp.core.models import TestStep as QaTestStep
 
 
@@ -148,3 +149,114 @@ class TestLintEngine:
         result = lint_engine.lint(tc)
         # Should have suggestions or info about being more specific
         assert len(result.issues) > 0 or len(result.suggestions) > 0
+
+
+class TestDataHygiene:
+    """Credentials and identifiers must not be baked into the test flow."""
+
+    @pytest.fixture
+    def engine(self):
+        return LintEngine()
+
+    def _testcase(self, **overrides):
+        base = {
+            "title": "Kullanıcı Girişi - Sipariş görüntüleme akışı",
+            "description": "Bu test, kullanıcının giriş yapıp siparişini görüntülemesini doğrular.",
+            "preconditions": ["Kullanıcı hesabı aktif"],
+            "steps": [
+                QaTestStep(
+                    step_number=1,
+                    action="Kullanıcı bilgileriyle giriş yap",
+                    expected_result="Kullanıcı dashboard sayfasına yönlendirilir",
+                )
+            ],
+            "expected_result": "Kullanıcı siparişini görüntüler",
+            "tags": ["auth"],
+            "requirements": ["REQ-1"],
+        }
+        base.update(overrides)
+        return QaTestCase(**base)
+
+    def _rules(self, result):
+        return {issue.rule for issue in result.issues}
+
+    def test_hardcoded_password_is_an_error(self):
+        """BAD-003 documents this as a security risk; nothing used to catch it."""
+        tc = self._testcase(
+            steps=[
+                QaTestStep(
+                    step_number=1,
+                    action="john@company.com ve S3cr3tP@ss ile giriş yap",
+                    expected_result="Giriş başarılı olur",
+                )
+            ]
+        )
+        result = LintEngine().lint(tc)
+
+        assert "test_data.hardcoded_credentials" in self._rules(result)
+        severity = next(
+            i.severity for i in result.issues if i.rule == "test_data.hardcoded_credentials"
+        )
+        assert severity == LintSeverity.ERROR
+
+    def test_labelled_secret_is_detected(self):
+        tc = self._testcase(
+            steps=[
+                QaTestStep(
+                    step_number=1,
+                    action="Authorization header'a token=ghp_abc123def456 ekle",
+                    expected_result="İstek yetkilendirilir",
+                )
+            ]
+        )
+        assert "test_data.hardcoded_credentials" in self._rules(LintEngine().lint(tc))
+
+    def test_undeclared_email_in_a_step_is_flagged(self):
+        tc = self._testcase(
+            steps=[
+                QaTestStep(
+                    step_number=1,
+                    action="Email alanına john@company.com gir",
+                    expected_result="Email kabul edilir",
+                )
+            ]
+        )
+        assert "test_data.hardcoded_identity" in self._rules(LintEngine().lint(tc))
+
+    def test_email_declared_as_test_data_is_not_flagged(self):
+        """Declaring the value is exactly the fix, so it must clear the rule."""
+        tc = self._testcase(
+            steps=[
+                QaTestStep(
+                    step_number=1,
+                    action="Email alanına test@example.com gir",
+                    expected_result="Email kabul edilir",
+                )
+            ],
+            test_data=[QaTestData(name="email", value="test@example.com")],
+        )
+        rules = self._rules(LintEngine().lint(tc))
+
+        assert "test_data.hardcoded_identity" not in rules
+        assert "test_data.not_parameterized" not in rules
+
+    def test_email_in_preconditions_only_is_not_flagged(self):
+        """Naming the test account as a precondition is normal practice."""
+        tc = self._testcase(preconditions=["Test kullanıcısı kayıtlı (test@example.com)"])
+        assert "test_data.hardcoded_identity" not in self._rules(LintEngine().lint(tc))
+
+    def test_literal_values_without_test_data_are_flagged(self):
+        tc = self._testcase(
+            steps=[
+                QaTestStep(
+                    step_number=1,
+                    action="12345 numaralı siparişin detayına git",
+                    expected_result="Sipariş detayı görüntülenir",
+                )
+            ]
+        )
+        assert "test_data.not_parameterized" in self._rules(LintEngine().lint(tc))
+
+    def test_clean_testcase_triggers_no_data_hygiene_rules(self):
+        rules = self._rules(LintEngine().lint(self._testcase()))
+        assert not {r for r in rules if r.startswith("test_data.hardcoded")}

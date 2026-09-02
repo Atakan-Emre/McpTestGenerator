@@ -30,8 +30,9 @@ Say goodbye to inconsistent manual QA documents. QA-MCP ensures that whether you
 - **🛠️ Smart Normalization:** Seamlessly convert Gherkin, Markdown, JSON, and plain text into the canonical QA-MCP schema.
 - **📈 Advanced Linting & Scoring:** Evaluate test cases against a shared QA schema with detailed scores, issue tracking, and improvement guidance.
 - **🔗 Xray Ready:** Instantly convert standardized test cases into Xray-compatible JSON payloads for Jira integration.
-- **📦 Suite Composition:** Dynamically compose and manage Smoke, Sanity, Regression, and E2E test suites.
+- **📦 Suite Composition:** Dynamically compose and manage Smoke, Sanity, Regression, E2E, Integration, and Performance test suites.
 - **📊 Coverage Reporting:** Track and report coverage metrics across requirements, modules, and risk areas.
+- **🧩 Modern MCP Surface:** Implements protocol revision `2025-11-25` — typed `structuredContent` results with published output schemas, read-only tool annotations, display titles, resource templates, and argument completion.
 
 ## 🚀 Quick Start
 
@@ -156,10 +157,11 @@ docker compose --profile dev up qa-mcp-dev
 
 For deep dives into QA-MCP's architecture and contribution guidelines, explore the docs:
 
-  - **[USAGE.md](https://www.google.com/search?q=USAGE.md):** Detailed usage examples and request payloads.
-  - **[CONTRIBUTING.md](https://www.google.com/search?q=CONTRIBUTING.md):** Contributor workflow and quality checks.
+  - **[USAGE.md](USAGE.md):** Detailed usage examples and request payloads.
+  - **[CONTRIBUTING.md](CONTRIBUTING.md):** Contributor workflow and quality checks.
   - **[CHANGELOG.md](CHANGELOG.md):** Release history.
-  - **[docs/PUBLISHING.md](https://www.google.com/search?q=docs/PUBLISHING.md):** Package and release publishing flow.
+  - **[docs/CI-CD.md](docs/CI-CD.md):** Jenkins pipeline and SonarQube analysis setup.
+  - **[docs/PUBLISHING.md](docs/PUBLISHING.md):** Package and release publishing flow.
 
 ## 🗺️ Roadmap
 
@@ -169,7 +171,7 @@ For deep dives into QA-MCP's architecture and contribution guidelines, explore t
 
 ## 📄 License
 
-Released under the **MIT License**. See [LICENSE](https://www.google.com/search?q=LICENSE) for details.
+Released under the **MIT License**. See [LICENSE](LICENSE) for details.
 
 -----
 
@@ -187,8 +189,9 @@ Tutarsız ve manuel hazırlanan QA dokümanlarına veda edin. QA-MCP; ham özell
   - **🛠️ Akıllı Normalizasyon:** Gherkin, Markdown, JSON ve düz metinleri standart QA-MCP şemasına sorunsuz bir şekilde dönüştürün.
   - **📈 Gelişmiş Linting ve Skorlama:** Test senaryolarını ortak kalite şemasına göre değerlendirin; detaylı skorlar, hatalar ve iyileştirme adımları elde edin.
   - **🔗 Xray Entegrasyonuna Hazır:** Standart test case'leri anında Jira/Xray uyumlu JSON payload'larına dönüştürün.
-  - **📦 Suite Yönetimi:** Smoke, Sanity, Regression ve E2E test suitlerini dinamik olarak oluşturun ve yönetin.
+  - **📦 Suite Yönetimi:** Smoke, Sanity, Regression, E2E, Integration ve Performance suitlerini dinamik olarak oluşturun ve yönetin.
   - **📊 Kapsam (Coverage) Raporlama:** Gereksinim, modül ve risk bazlı test kapsam metriklerini raporlayın.
+  - **🧩 Güncel MCP Yüzeyi:** `2025-11-25` protokol revizyonunu uygular — yayınlanmış çıktı şemalarıyla tipli `structuredContent`, read-only tool annotation'ları, görünen adlar, resource template ve argüman tamamlama.
 
 ## 🚀 Hızlı Başlangıç
 
@@ -314,10 +317,11 @@ docker compose --profile dev up qa-mcp-dev
 
 Mimari detaylar ve projeye katkı rehberleri için:
 
-  - **[USAGE.md](https://www.google.com/search?q=USAGE.md):** Detaylı kullanım örnekleri ve request payload'ları.
-  - **[CONTRIBUTING.md](https://www.google.com/search?q=CONTRIBUTING.md):** Katkı akışı ve kalite kontrolleri.
+  - **[USAGE.md](USAGE.md):** Detaylı kullanım örnekleri ve request payload'ları.
+  - **[CONTRIBUTING.md](CONTRIBUTING.md):** Katkı akışı ve kalite kontrolleri.
   - **[CHANGELOG.md](CHANGELOG.md):** Sürüm ve değişiklik geçmişi.
-  - **[docs/PUBLISHING.md](https://www.google.com/search?q=docs/PUBLISHING.md):** Paket ve release yayın süreci.
+  - **[docs/CI-CD.md](docs/CI-CD.md):** Jenkins pipeline ve SonarQube analiz kurulumu.
+  - **[docs/PUBLISHING.md](docs/PUBLISHING.md):** Paket ve release yayın süreci.
 
 ## 🗺️ Yol Haritası
 
@@ -327,4 +331,4 @@ Mimari detaylar ve projeye katkı rehberleri için:
 
 ## 📄 Lisans
 
-**MIT License** ile yayınlanmıştır. Ayrıntılar için [LICENSE](https://www.google.com/search?q=LICENSE) dosyasına göz atabilirsiniz.
+**MIT License** ile yayınlanmıştır. Ayrıntılar için [LICENSE](LICENSE) dosyasına göz atabilirsiniz.

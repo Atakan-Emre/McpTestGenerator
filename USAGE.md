@@ -212,6 +212,8 @@ Tool names use underscores to stay compatible with Claude Desktop's MCP validato
   "score": 35,
   "grade": "F",
   "passed": false,
+  "schema_valid": false,
+  "schema_errors": ["title: String should have at least 10 characters"],
   "issues": [
     {
       "severity": "error",
@@ -339,7 +341,10 @@ Tool names use underscores to stay compatible with Claude Desktop's MCP validato
 
 ### 8. Suite Composition (`suite_compose`)
 
-**Purpose:** Creates Smoke/Regression/E2E suite from test case list.
+**Purpose:** Creates a suite from a test case list.
+
+`target` accepts `smoke`, `sanity`, `regression`, `e2e`, `integration` or
+`performance`. Each has its own priority, risk, duration and size limits.
 
 ```json
 {
@@ -632,6 +637,8 @@ Tool adları Claude Desktop MCP doğrulayıcısıyla uyum için underscore kulla
   "score": 35,
   "grade": "F",
   "passed": false,
+  "schema_valid": false,
+  "schema_errors": ["title: String should have at least 10 characters"],
   "issues": [
     {
       "severity": "error",
@@ -758,6 +765,9 @@ Tool adları Claude Desktop MCP doğrulayıcısıyla uyum için underscore kulla
 ```
 
 ### 8. Suite Kompozisyonu (`suite_compose`)
+
+`target` değerleri: `smoke`, `sanity`, `regression`, `e2e`, `integration`,
+`performance`. Her birinin kendi öncelik, risk, süre ve adet limitleri vardır.
 
 **Amaç:** Test case listesinden Smoke/Regression/E2E suite oluşturur.
 

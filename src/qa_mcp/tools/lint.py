@@ -7,7 +7,7 @@ Analyzes test cases for quality issues and provides improvement suggestions.
 from typing import Any, TypedDict
 
 from qa_mcp.core.lint import LintEngine
-from qa_mcp.core.models import LintResult, TestCase
+from qa_mcp.core.models import LintResult, TestCase, TestCaseDraft
 from qa_mcp.core.standards import TestCaseStandard
 
 
@@ -45,27 +45,38 @@ def lint_testcase(
 
     engine = LintEngine(standard)
 
-    # Parse test case
+    # Parse into the permissive draft model. A test case that violates the
+    # standard is precisely what lint exists to report on, so it must not be
+    # rejected before the rules get to run.
     try:
-        tc = TestCase(**testcase)
+        tc = TestCaseDraft(**testcase)
     except Exception as e:
         return {
             "score": 0,
             "grade": "F",
             "passed": False,
+            "schema_valid": False,
+            "schema_errors": [str(e)],
             "issues": [
                 {
                     "severity": "error",
                     "field": "structure",
                     "rule": "valid_structure",
-                    "message": f"Test case yapısı geçersiz: {str(e)}",
-                    "suggestion": "Test case'in gerekli alanları içerdiğinden emin olun",
+                    "message": f"Test case yapısı okunamadı: {str(e)}",
+                    "suggestion": "Alan tiplerini kontrol edin (steps bir liste, tags bir string listesi olmalı)",
                 }
             ],
             "suggestions": ["Test case yapısını QA-MCP standardına göre düzeltin"],
             "improvement_plan": [],
             "error": str(e),
         }
+
+    # Separately record whether the input also satisfies the strict standard.
+    schema_errors: list[str] = []
+    try:
+        TestCase(**testcase)
+    except Exception as e:
+        schema_errors.append(str(e))
 
     # Run lint
     result: LintResult = engine.lint(tc)
@@ -75,6 +86,8 @@ def lint_testcase(
         "score": result.score,
         "grade": result.grade,
         "passed": result.passed,
+        "schema_valid": not schema_errors,
+        "schema_errors": schema_errors,
         "issues": [
             {
                 "severity": issue.severity.value,

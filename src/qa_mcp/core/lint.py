@@ -4,12 +4,14 @@ Lint Engine for Test Case Quality Analysis.
 Analyzes test cases against standards and provides quality scores and suggestions.
 """
 
+import re
+
 from qa_mcp.core.models import (
     LintIssue,
     LintResult,
     LintSeverity,
     ScenarioType,
-    TestCase,
+    TestCaseDraft,
 )
 from qa_mcp.core.standards import TestCaseStandard
 
@@ -28,12 +30,12 @@ class LintEngine:
         """Initialize with a standard (uses default if not provided)."""
         self.standard = standard or TestCaseStandard.get_default()
 
-    def lint(self, testcase: TestCase) -> LintResult:
+    def lint(self, testcase: TestCaseDraft) -> LintResult:
         """
         Lint a test case and return results.
 
         Args:
-            testcase: The test case to analyze
+            testcase: The test case to analyze (draft or standard-conforming)
 
         Returns:
             LintResult with score, issues, and suggestions
@@ -51,6 +53,7 @@ class LintEngine:
             testcase, score, issues, suggestions
         )
         score, issues, suggestions = self._check_test_data(testcase, score, issues, suggestions)
+        score, issues, suggestions = self._check_data_hygiene(testcase, score, issues, suggestions)
         score, issues, suggestions = self._check_classification(
             testcase, score, issues, suggestions
         )
@@ -69,7 +72,7 @@ class LintEngine:
 
     def _check_title(
         self,
-        tc: TestCase,
+        tc: TestCaseDraft,
         score: int,
         issues: list[LintIssue],
         suggestions: list[str],
@@ -86,6 +89,18 @@ class LintEngine:
                     rule="title.min_length",
                     message="Başlık çok kısa (minimum 10 karakter)",
                     suggestion="Neyin test edildiğini açıkça belirten daha açıklayıcı bir başlık yazın",
+                )
+            )
+            score -= 10
+
+        if len(title) > 200:
+            issues.append(
+                LintIssue(
+                    severity=LintSeverity.ERROR,
+                    field="title",
+                    rule="title.max_length",
+                    message=f"Başlık çok uzun ({len(title)} karakter, maksimum 200)",
+                    suggestion="Başlığı kısaltın; kapsam çok genişse test case'i birden fazla test'e bölün",
                 )
             )
             score -= 10
@@ -127,7 +142,7 @@ class LintEngine:
 
     def _check_description(
         self,
-        tc: TestCase,
+        tc: TestCaseDraft,
         score: int,
         issues: list[LintIssue],
         suggestions: list[str],
@@ -164,7 +179,7 @@ class LintEngine:
 
     def _check_preconditions(
         self,
-        tc: TestCase,
+        tc: TestCaseDraft,
         score: int,
         issues: list[LintIssue],
         suggestions: list[str],
@@ -200,7 +215,7 @@ class LintEngine:
 
     def _check_steps(
         self,
-        tc: TestCase,
+        tc: TestCaseDraft,
         score: int,
         issues: list[LintIssue],
         suggestions: list[str],
@@ -277,7 +292,7 @@ class LintEngine:
 
     def _check_expected_result(
         self,
-        tc: TestCase,
+        tc: TestCaseDraft,
         score: int,
         issues: list[LintIssue],
         suggestions: list[str],
@@ -320,7 +335,7 @@ class LintEngine:
 
     def _check_test_data(
         self,
-        tc: TestCase,
+        tc: TestCaseDraft,
         score: int,
         issues: list[LintIssue],
         suggestions: list[str],
@@ -372,7 +387,7 @@ class LintEngine:
 
     def _check_classification(
         self,
-        tc: TestCase,
+        tc: TestCaseDraft,
         score: int,
         issues: list[LintIssue],
         suggestions: list[str],
@@ -407,7 +422,7 @@ class LintEngine:
 
     def _check_traceability(
         self,
-        tc: TestCase,
+        tc: TestCaseDraft,
         score: int,
         issues: list[LintIssue],
         suggestions: list[str],
@@ -424,6 +439,121 @@ class LintEngine:
                 )
             )
             score -= 3
+
+        return score, issues, suggestions
+
+    # --- Data hygiene ------------------------------------------------------
+    #
+    # A test case that inlines a real account and its password is both a
+    # security problem and a test that only ever works for that one account.
+    # Preconditions are excluded on purpose: naming the test account there is
+    # normal practice, the smell is a literal baked into the executable flow.
+
+    _EMAIL_PATTERN = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
+    _LABELLED_SECRET_PATTERN = re.compile(
+        r"(?:password|passwd|pwd|şifre|sifre|parola|token|secret|api[_ -]?key|apikey|credential)"
+        r"\s*[:=]\s*(\S+)",
+        re.IGNORECASE,
+    )
+    _LONG_NUMBER_PATTERN = re.compile(r"\b\d{4,}\b")
+
+    @staticmethod
+    def _looks_like_a_secret(token: str) -> bool:
+        """Heuristic for a literal password: long and mixed across character classes."""
+        if len(token) < 8:
+            return False
+        return (
+            any(c.islower() for c in token)
+            and any(c.isupper() for c in token)
+            and any(c.isdigit() for c in token)
+            and any(not c.isalnum() for c in token)
+        )
+
+    @staticmethod
+    def _flow_text(tc: TestCaseDraft) -> str:
+        """The executable part of the test case, where literals do not belong."""
+        parts = [tc.title, tc.expected_result]
+        for step in tc.steps:
+            parts.append(step.action)
+            parts.append(step.expected_result)
+        return "\n".join(p for p in parts if p)
+
+    @staticmethod
+    def _declared_values(tc: TestCaseDraft) -> set[str]:
+        """Values the test case declares as test data, lowercased."""
+        declared: set[str] = set()
+        for data in tc.test_data:
+            declared.add(str(data.value).lower())
+            declared.add(data.name.lower())
+        return declared
+
+    def _check_data_hygiene(
+        self,
+        tc: TestCaseDraft,
+        score: int,
+        issues: list[LintIssue],
+        suggestions: list[str],
+    ) -> tuple[int, list[LintIssue], list[str]]:
+        """Flag credentials and identifiers hardcoded into the test flow."""
+        flow = self._flow_text(tc)
+        if not flow:
+            return score, issues, suggestions
+
+        declared = self._declared_values(tc)
+
+        # Emails first, so their '@' is not mistaken for a password symbol.
+        emails = [e for e in self._EMAIL_PATTERN.findall(flow) if e.lower() not in declared]
+        flow_without_emails = self._EMAIL_PATTERN.sub(" ", flow)
+
+        secrets = {
+            match
+            for match in self._LABELLED_SECRET_PATTERN.findall(flow_without_emails)
+            if match.lower() not in declared
+        }
+        secrets.update(
+            token.strip("'\"`,.;:()[]{}")
+            for token in flow_without_emails.split()
+            if self._looks_like_a_secret(token.strip("'\"`,.;:()[]{}"))
+            and token.strip("'\"`,.;:()[]{}").lower() not in declared
+        )
+
+        if secrets:
+            issues.append(
+                LintIssue(
+                    severity=LintSeverity.ERROR,
+                    field="test_data",
+                    rule="test_data.hardcoded_credentials",
+                    message=f"Test adımlarında credential görünümlü sabit değer var: {', '.join(sorted(secrets))}",
+                    suggestion="Credential'ları test case'den çıkarın; test_data'da adlandırın ve değeri environment variable'dan alın (örn: ${TEST_USER_PASSWORD})",
+                )
+            )
+            score -= 20
+
+        if emails:
+            issues.append(
+                LintIssue(
+                    severity=LintSeverity.WARNING,
+                    field="test_data",
+                    rule="test_data.hardcoded_identity",
+                    message=f"Test akışında tanımlanmamış kimlik bilgisi sabitlenmiş: {', '.join(sorted(set(emails)))}",
+                    suggestion="Bu değeri test_data'da tanımlayın ve adımda adıyla referans verin; test böylece tek bir hesaba bağlı kalmaz",
+                )
+            )
+            score -= 6
+
+        if not tc.test_data and (
+            emails or secrets or self._LONG_NUMBER_PATTERN.search(flow) or "'" in flow
+        ):
+            issues.append(
+                LintIssue(
+                    severity=LintSeverity.WARNING,
+                    field="test_data",
+                    rule="test_data.not_parameterized",
+                    message="Adımlar sabit değerler içeriyor ancak test_data tanımlı değil - test tekrar kullanılabilir değil",
+                    suggestion="Sabit değerleri test_data olarak çıkarın; aynı test farklı veri setleriyle çalıştırılabilsin",
+                )
+            )
+            score -= 6
 
         return score, issues, suggestions
 

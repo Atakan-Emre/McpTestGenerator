@@ -1,0 +1,78 @@
+{
+  "id": "BAD-003",
+  "metadata": {
+    "name": "Kötü Örnek - Hardcoded Değerler",
+    "problems": [
+      "Gerçek email ve şifre test case'de hardcoded",
+      "Production verisi test case'de geçiyor",
+      "Test data ayrı tanımlanmamış",
+      "Test tekrar kullanılamaz - sadece 'John' için geçerli",
+      "Güvenlik riski - credentials exposed"
+    ],
+    "lint_score_estimate": 45,
+    "grade": "F",
+    "improvement_needed": "Test data parametrik olmalı, credentials environment variable'dan gelmeli"
+  },
+  "testcase": {
+    "title": "Kullanıcı john@company.com ile giriş yapabilmeli ve 12345 siparişi görebilmeli",
+    "description": "John'un siparişini kontrol et",
+    "preconditions": [
+      "John'un hesabı var"
+    ],
+    "steps": [
+      {
+        "step_number": 1,
+        "action": "john@company.com ve S3cr3tP@ss ile giriş yap",
+        "expected_result": "Giriş başarılı"
+      },
+      {
+        "step_number": 2,
+        "action": "12345 siparişine git",
+        "expected_result": "Sipariş görünür"
+      }
+    ],
+    "expected_result": "John siparişini görür",
+    "test_data": []
+  },
+  "corrected_version": {
+    "note": "Test data parametrik hale getirilmeli ve credentials test case dışında tutulmalı:",
+    "title": "Kullanıcı Girişi - Kayıtlı kullanıcı kendi siparişini görüntüleyebilir",
+    "description": "Bu test, kimliği doğrulanmış bir kullanıcının kendi sipariş detayına erişebildiğini doğrular. Kullanıcı ve sipariş bilgileri test data olarak parametriktir.",
+    "preconditions": [
+      "Test kullanıcısı sisteme kayıtlı (test_data.user_email)",
+      "Kullanıcıya ait en az bir sipariş mevcut (test_data.order_id)"
+    ],
+    "steps": [
+      {
+        "step_number": 1,
+        "action": "test_data.user_email ve test_data.user_password ile giriş yap",
+        "expected_result": "Kullanıcı dashboard sayfasına yönlendirilir"
+      },
+      {
+        "step_number": 2,
+        "action": "test_data.order_id numaralı siparişin detayına git",
+        "expected_result": "Sipariş detay sayfası siparişin kalemlerini ve tutarını gösterir"
+      }
+    ],
+    "test_data": [
+      {
+        "name": "user_email",
+        "value": "${TEST_USER_EMAIL}",
+        "description": "Ortam değişkeninden gelen test kullanıcısı"
+      },
+      {
+        "name": "user_password",
+        "value": "${TEST_USER_PASSWORD}",
+        "description": "Ortam değişkeninden gelen şifre - test case'e yazılmaz"
+      },
+      {
+        "name": "order_id",
+        "value": "${TEST_ORDER_ID}",
+        "description": "Test verisi olarak hazırlanan sipariş numarası"
+      }
+    ],
+    "expected_result": "Kullanıcı kendi siparişinin detayını görüntüler; başka kullanıcının siparişine erişemez",
+    "risk_level": "high",
+    "priority": "P1"
+  }
+}

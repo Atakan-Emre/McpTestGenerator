@@ -1,0 +1,189 @@
+{
+  "id": "BAD-002",
+  "metadata": {
+    "name": "Kötü Örnek - Çok Uzun ve Kapsamlı Test Case",
+    "problems": [
+      "Başlık çok uzun (200+ karakter)",
+      "Tek test case çok fazla şeyi kapsıyor - bölünmeli",
+      "25 adım var - maximum 15 olmalı",
+      "Tüm adımlar generic 'Adım X' - anlamlı değil",
+      "Tüm expected result'lar 'OK' - doğrulanabilir değil",
+      "Fail durumunda hangisinin sorun olduğu belirsiz",
+      "Test süresi çok uzun olacak",
+      "Maintenance nightmare - bir değişiklik tüm test'i etkiler"
+    ],
+    "lint_score_estimate": 35,
+    "grade": "F",
+    "improvement_needed": "5+ ayrı test case'e bölünmeli"
+  },
+  "testcase": {
+    "title": "Tüm e-ticaret akışını baştan sona test et - kullanıcı kaydı, email doğrulama, profil güncelleme, ürün arama, filtreleme, sepete ekleme, kupon uygulama, checkout, adres ve kargo seçimi, ödeme, 3D Secure, sipariş onayı, email bildirimi, sipariş geçmişi, kargo takibi ve fatura indirme dahil tam süreç doğrulama testi",
+    "description": "Herşeyi test et",
+    "preconditions": [
+      "Sistem çalışıyor"
+    ],
+    "steps": [
+      {
+        "step_number": 1,
+        "action": "Anasayfayı aç",
+        "expected_result": "OK"
+      },
+      {
+        "step_number": 2,
+        "action": "Kayıt ol",
+        "expected_result": "OK"
+      },
+      {
+        "step_number": 3,
+        "action": "Email doğrula",
+        "expected_result": "OK"
+      },
+      {
+        "step_number": 4,
+        "action": "Login ol",
+        "expected_result": "OK"
+      },
+      {
+        "step_number": 5,
+        "action": "Profil güncelle",
+        "expected_result": "OK"
+      },
+      {
+        "step_number": 6,
+        "action": "Ürün ara",
+        "expected_result": "OK"
+      },
+      {
+        "step_number": 7,
+        "action": "Filtreleri uygula",
+        "expected_result": "OK"
+      },
+      {
+        "step_number": 8,
+        "action": "Ürün detayına git",
+        "expected_result": "OK"
+      },
+      {
+        "step_number": 9,
+        "action": "Sepete ekle",
+        "expected_result": "OK"
+      },
+      {
+        "step_number": 10,
+        "action": "Sepeti görüntüle",
+        "expected_result": "OK"
+      },
+      {
+        "step_number": 11,
+        "action": "Miktarı güncelle",
+        "expected_result": "OK"
+      },
+      {
+        "step_number": 12,
+        "action": "Kupon uygula",
+        "expected_result": "OK"
+      },
+      {
+        "step_number": 13,
+        "action": "Checkout'a git",
+        "expected_result": "OK"
+      },
+      {
+        "step_number": 14,
+        "action": "Adres gir",
+        "expected_result": "OK"
+      },
+      {
+        "step_number": 15,
+        "action": "Kargo seç",
+        "expected_result": "OK"
+      },
+      {
+        "step_number": 16,
+        "action": "Ödeme yöntemini seç",
+        "expected_result": "OK"
+      },
+      {
+        "step_number": 17,
+        "action": "Kart bilgilerini gir",
+        "expected_result": "OK"
+      },
+      {
+        "step_number": 18,
+        "action": "3D Secure doğrula",
+        "expected_result": "OK"
+      },
+      {
+        "step_number": 19,
+        "action": "Siparişi onayla",
+        "expected_result": "OK"
+      },
+      {
+        "step_number": 20,
+        "action": "Onay sayfasını kontrol et",
+        "expected_result": "OK"
+      },
+      {
+        "step_number": 21,
+        "action": "Email bildirimi kontrol et",
+        "expected_result": "OK"
+      },
+      {
+        "step_number": 22,
+        "action": "Sipariş geçmişine git",
+        "expected_result": "OK"
+      },
+      {
+        "step_number": 23,
+        "action": "Sipariş detayını görüntüle",
+        "expected_result": "OK"
+      },
+      {
+        "step_number": 24,
+        "action": "Kargo takip et",
+        "expected_result": "OK"
+      },
+      {
+        "step_number": 25,
+        "action": "Fatura indir",
+        "expected_result": "OK"
+      }
+    ],
+    "expected_result": "Hepsi çalışır"
+  },
+  "suggested_split": {
+    "note": "Bu tek test case aşağıdaki 6 ayrı test case'e bölünmeli:",
+    "test_cases": [
+      {
+        "name": "TC-REG-001: Kullanıcı Kaydı",
+        "scope": "Kayıt, email doğrulama, profil güncelleme",
+        "steps_count": 4
+      },
+      {
+        "name": "TC-SEARCH-001: Ürün Arama ve Filtreleme",
+        "scope": "Arama, filtreler, ürün detay",
+        "steps_count": 3
+      },
+      {
+        "name": "TC-CART-001: Sepet İşlemleri",
+        "scope": "Sepete ekleme, miktar güncelleme, kupon",
+        "steps_count": 4
+      },
+      {
+        "name": "TC-CHECKOUT-001: Checkout Süreci",
+        "scope": "Adres, kargo, ödeme seçimi",
+        "steps_count": 4
+      },
+      {
+        "name": "TC-PAYMENT-001: Ödeme İşlemi",
+        "scope": "Kart bilgileri, 3D Secure, onay",
+        "steps_count": 4
+      },
+      {
+        "name": "TC-ORDER-001: Sipariş Takibi",
+        "scope": "Onay sayfası, email, sipariş geçmişi, kargo",
+        "steps_count": 5
+      }
+    ]
+  }
+}

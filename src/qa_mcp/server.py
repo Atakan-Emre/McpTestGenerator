@@ -16,16 +16,25 @@ from typing import Any, cast
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import (
+    CallToolResult,
+    Completion,
+    CompletionArgument,
     GetPromptResult,
     Prompt,
     PromptArgument,
     PromptMessage,
+    PromptReference,
     Resource,
+    ResourceTemplate,
+    ResourceTemplateReference,
     TextContent,
     Tool,
+    ToolAnnotations,
 )
 
 from qa_mcp import __version__
+from qa_mcp.core.schemas import OUTPUT_SCHEMAS
+from qa_mcp.core.standards import SUITE_RULES
 from qa_mcp.prompts.templates import PROMPT_REGISTRY
 from qa_mcp.resources.standards import (
     get_bad_examples,
@@ -59,9 +68,45 @@ TOOL_NAME_ALIASES = {
 }
 
 
+# Completion suggestions for free-text prompt arguments.
+PROMPT_ARGUMENT_SUGGESTIONS: dict[str, list[str]] = {
+    "max_duration": ["15", "30", "60", "120"],
+}
+
+# Human-readable display names (MCP revision 2025-11-25 `title` field).
+TOOL_TITLES = {
+    "testcase_generate": "Test Case Üret",
+    "testcase_lint": "Test Case Kalite Analizi",
+    "testcase_lint_batch": "Toplu Kalite Analizi",
+    "testcase_normalize": "Test Case Normalleştir",
+    "testcase_to_xray": "Xray Formatına Dönüştür",
+    "testcase_to_xray_batch": "Toplu Xray Dönüşümü",
+    "suite_compose": "Test Suite Oluştur",
+    "suite_coverage_report": "Kapsam Raporu",
+    "xray_get_mapping_template": "Xray Alan Eşleme Şablonu",
+}
+
+
 def _canonicalize_tool_name(name: str) -> str:
     """Return the Claude Desktop-safe tool name for the requested tool."""
     return TOOL_NAME_ALIASES.get(name, name)
+
+
+def _tool_annotations(title: str) -> ToolAnnotations:
+    """Behaviour hints for a QA-MCP tool.
+
+    Every tool is a pure transformation of its arguments: nothing is persisted,
+    no external system is contacted, and repeating a call with the same input
+    has no additional effect. Declaring that lets clients skip the approval
+    prompts they show for tools that might mutate state.
+    """
+    return ToolAnnotations(
+        title=title,
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=False,
+    )
 
 
 # Configure logging
@@ -76,8 +121,9 @@ logger = logging.getLogger("qa-mcp")
 ENABLE_WRITE_TOOLS = os.getenv("ENABLE_WRITE_TOOLS", "false").lower() == "true"
 AUDIT_LOG_ENABLED = os.getenv("AUDIT_LOG_ENABLED", "true").lower() == "true"
 
-# Create server instance
-server = Server("qa-mcp")
+# Create server instance. Passing the version explicitly stops clients from
+# reporting the MCP SDK's version as the server's.
+server = Server("qa-mcp", version=__version__)
 
 
 # ==============================================================================
@@ -271,7 +317,7 @@ async def list_tools() -> list[Tool]:
                     },
                     "target": {
                         "type": "string",
-                        "enum": ["smoke", "sanity", "regression", "e2e"],
+                        "enum": sorted(SUITE_RULES),
                         "description": "Suite tipi",
                     },
                     "sprint": {
@@ -321,12 +367,43 @@ async def list_tools() -> list[Tool]:
         ),
     ]
 
+    # Attach the MCP 2025-11-25 metadata in one place so a new tool cannot be
+    # added without a display name and a result schema.
+    for tool in tools:
+        title = TOOL_TITLES[tool.name]
+        tool.title = title
+        tool.annotations = _tool_annotations(title)
+        tool.outputSchema = OUTPUT_SCHEMAS[tool.name]
+
     return tools
 
 
+def _tool_error(name: str, message: str) -> CallToolResult:
+    """Build a protocol-level error result.
+
+    Returning a plain dict with an ``error`` key left ``isError`` false, so
+    clients treated a failed call as a successful one whose payload happened to
+    mention an error.
+    """
+    return CallToolResult(
+        content=[
+            TextContent(
+                type="text",
+                text=json.dumps({"error": message, "tool": name}, ensure_ascii=False),
+            )
+        ],
+        isError=True,
+    )
+
+
 @server.call_tool()
-async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
-    """Handle tool calls."""
+async def call_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any] | CallToolResult:
+    """Handle tool calls.
+
+    Returning a ``dict`` makes the runtime emit it as ``structuredContent``
+    (validated against the tool's ``outputSchema``) alongside the JSON text
+    block, so clients get typed data instead of a string they have to parse.
+    """
     canonical_name = _canonicalize_tool_name(name)
     logger.debug(f"Tool called: {name} (canonical: {canonical_name}) with args: {arguments}")
 
@@ -383,7 +460,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
             result = convert_to_xray(
                 testcase=arguments["testcase"],
                 project_key=arguments["project_key"],
-                test_type=arguments.get("test_type", "Manual"),
+                test_type=arguments.get("test_type"),
                 include_custom_fields=arguments.get("include_custom_fields", True),
                 custom_field_mappings=arguments.get("custom_field_mappings"),
             )
@@ -395,7 +472,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
             result = convert_batch_to_xray(
                 testcases=arguments["testcases"],
                 project_key=arguments["project_key"],
-                test_type=arguments.get("test_type", "Manual"),
+                test_type=arguments.get("test_type"),
             )
             audit_log(
                 canonical_name,
@@ -429,34 +506,13 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
             audit_log(canonical_name, arguments, "Returned mapping template")
 
         else:
-            return [
-                TextContent(
-                    type="text",
-                    text=json.dumps({"error": f"Unknown tool: {name}"}, ensure_ascii=False),
-                )
-            ]
+            return _tool_error(name, f"Unknown tool: {name}")
 
-        return [
-            TextContent(
-                type="text",
-                text=json.dumps(result, ensure_ascii=False, indent=2, default=str),
-            )
-        ]
+        return cast(dict[str, Any], result)
 
     except Exception as e:
         logger.error(f"Tool error: {name} - {str(e)}")
-        return [
-            TextContent(
-                type="text",
-                text=json.dumps(
-                    {
-                        "error": str(e),
-                        "tool": name,
-                    },
-                    ensure_ascii=False,
-                ),
-            )
-        ]
+        return _tool_error(name, str(e))
 
 
 # ==============================================================================
@@ -471,54 +527,124 @@ async def list_resources() -> list[Resource]:
         Resource(
             uri="qa://standards/testcase/v1",
             name="Test Case Standard v1",
+            title="Test Case Standardı",
             description="Kurumsal test case yazım standardı",
             mimeType="application/json",
         ),
         Resource(
             uri="qa://checklists/lint-rules/v1",
             name="Lint Rules v1",
+            title="Lint Kuralları",
             description="Test case kalite kontrol kuralları",
             mimeType="application/json",
         ),
         Resource(
             uri="qa://mappings/xray/v1",
             name="Xray Field Mapping v1",
+            title="Xray Alan Eşlemesi",
             description="QA-MCP to Xray alan eşlemeleri",
             mimeType="application/json",
         ),
         Resource(
             uri="qa://examples/good",
             name="Good Examples",
+            title="İyi Örnekler",
             description="İyi test case örnekleri",
             mimeType="application/json",
         ),
         Resource(
             uri="qa://examples/bad",
             name="Bad Examples",
+            title="Kötü Örnekler (Anti-pattern)",
             description="Kötü test case örnekleri (anti-patterns)",
             mimeType="application/json",
         ),
     ]
 
 
+# Values the `qa://examples/{quality}` template accepts.
+EXAMPLE_QUALITIES = ("good", "bad")
+
+
+@server.list_resource_templates()
+async def list_resource_templates() -> list[ResourceTemplate]:
+    """Expose the parameterised form of the example collections.
+
+    `qa://examples/good` and `qa://examples/bad` are two instances of one
+    template; declaring it lets clients discover the axis and complete it.
+    """
+    return [
+        ResourceTemplate(
+            uriTemplate="qa://examples/{quality}",
+            name="Test Case Examples",
+            title="Test Case Örnekleri",
+            description=(
+                "Kalite seviyesine göre örnek test case'ler. "
+                f"Geçerli değerler: {', '.join(EXAMPLE_QUALITIES)}"
+            ),
+            mimeType="application/json",
+        ),
+    ]
+
+
+@server.completion()
+async def complete_argument(
+    ref: PromptReference | ResourceTemplateReference,
+    argument: CompletionArgument,
+    context: Any = None,
+) -> Completion | None:
+    """Complete resource-template and prompt arguments."""
+    prefix = (argument.value or "").lower()
+
+    if isinstance(ref, ResourceTemplateReference) and argument.name == "quality":
+        values = [q for q in EXAMPLE_QUALITIES if q.startswith(prefix)]
+        return Completion(values=values, total=len(values), hasMore=False)
+
+    if isinstance(ref, PromptReference):
+        values = [
+            v for v in PROMPT_ARGUMENT_SUGGESTIONS.get(argument.name, []) if v.startswith(prefix)
+        ]
+        if values:
+            return Completion(values=values, total=len(values), hasMore=False)
+
+    return None
+
+
+RESOURCE_MAP: dict[str, Callable[[], Any]] = {
+    "qa://standards/testcase/v1": get_testcase_standard,
+    "qa://checklists/lint-rules/v1": get_lint_rules,
+    "qa://mappings/xray/v1": get_xray_mapping,
+    "qa://examples/good": get_good_examples,
+    "qa://examples/bad": get_bad_examples,
+}
+
+
+def _resolve_resource_uri(uri: Any) -> str:
+    """Normalize the URI the MCP runtime passes in.
+
+    The SDK hands the handler a pydantic ``AnyUrl``, not a ``str``, and URL
+    parsing may append a trailing slash to authority-only URIs. Both forms have
+    to resolve to the same registry key.
+    """
+    uri_str = str(uri)
+    if uri_str in RESOURCE_MAP:
+        return uri_str
+
+    trimmed = uri_str.rstrip("/")
+    if trimmed in RESOURCE_MAP:
+        return trimmed
+
+    raise ValueError(f"Unknown resource: {uri_str}")
+
+
 @server.read_resource()
-async def read_resource(uri: str) -> str:
+async def read_resource(uri: Any) -> str:
     """Read a resource by URI."""
     logger.debug(f"Resource read: {uri}")
 
-    resource_map = {
-        "qa://standards/testcase/v1": get_testcase_standard,
-        "qa://checklists/lint-rules/v1": get_lint_rules,
-        "qa://mappings/xray/v1": get_xray_mapping,
-        "qa://examples/good": get_good_examples,
-        "qa://examples/bad": get_bad_examples,
-    }
-
-    if uri in resource_map:
-        data = resource_map[uri]()
-        return json.dumps(data, ensure_ascii=False, indent=2)
-
-    raise ValueError(f"Unknown resource: {uri}")
+    key = _resolve_resource_uri(uri)
+    data = RESOURCE_MAP[key]()
+    return json.dumps(data, ensure_ascii=False, indent=2)
 
 
 # ==============================================================================
