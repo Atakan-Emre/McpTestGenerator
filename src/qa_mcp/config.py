@@ -20,6 +20,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 AuthMode = Literal["none", "token", "basic"]
+Deployment = Literal["cloud", "server"]
+
+# Xray Cloud serves its own API from a dedicated host, separate from Jira.
+DEFAULT_XRAY_CLOUD_URL = "https://xray.cloud.getxray.app"
 
 
 class XraySettings(BaseSettings):
@@ -40,6 +44,13 @@ class XraySettings(BaseSettings):
     enabled: bool = Field(
         False,
         description="Allow QA-MCP to contact Jira/Xray. Off by default.",
+    )
+    deployment: Deployment = Field(
+        "cloud",
+        description=(
+            "'cloud' for Jira Cloud + Xray Cloud, 'server' for Jira Server/Data Center. "
+            "The two host Xray behind completely different APIs."
+        ),
     )
     base_url: str | None = Field(
         None,
@@ -70,6 +81,22 @@ class XraySettings(BaseSettings):
     verify_tls: bool = Field(True, description="Disable only for an internal CA in testing")
     max_retries: int = Field(2, ge=0, le=10)
 
+    # Xray Cloud authenticates with an Xray API Key - a client id and secret
+    # created in Xray's own Global Settings. It is NOT the Jira API token, and
+    # one cannot be used in place of the other.
+    cloud_base_url: str = Field(
+        DEFAULT_XRAY_CLOUD_URL,
+        description="Xray Cloud API host",
+    )
+    client_id: str | None = Field(
+        None,
+        description="Xray Cloud API Key client id (Xray Global Settings -> API Keys)",
+    )
+    client_secret: SecretStr | None = Field(
+        None,
+        description="Xray Cloud API Key client secret",
+    )
+
     # Xray custom field ids differ per tenant, so they cannot be hardcoded.
     # Supplied as QA_MCP_XRAY_CUSTOM_FIELDS='{"risk_level": "customfield_10001"}'
     custom_fields: dict[str, str] = Field(
@@ -77,7 +104,7 @@ class XraySettings(BaseSettings):
         description="QA-MCP field name -> Jira custom field id",
     )
 
-    @field_validator("base_url")
+    @field_validator("base_url", "cloud_base_url")
     @classmethod
     def _strip_trailing_slash(cls, value: str | None) -> str | None:
         return value.rstrip("/") if value else value
@@ -107,6 +134,36 @@ class XraySettings(BaseSettings):
                 "Set them, or leave QA_MCP_XRAY_ENABLED unset to run QA-MCP offline."
             )
         return self
+
+    @property
+    def is_cloud(self) -> bool:
+        return self.deployment == "cloud"
+
+    @property
+    def has_xray_api(self) -> bool:
+        """Whether Xray-specific operations (test steps) are reachable.
+
+        On Server/Data Center the Jira credentials also reach Xray's endpoints.
+        On Cloud, Xray is a separate service behind its own API key, so Jira
+        credentials alone are not enough.
+        """
+        if not self.is_configured:
+            return False
+        if self.is_cloud:
+            return bool(self.client_id and self.client_secret)
+        return True
+
+    @property
+    def missing_xray_api_settings(self) -> list[str]:
+        """Which variables would enable Xray-specific operations."""
+        if not self.is_cloud or self.has_xray_api:
+            return []
+        missing = []
+        if not self.client_id:
+            missing.append("QA_MCP_XRAY_CLIENT_ID")
+        if not self.client_secret:
+            missing.append("QA_MCP_XRAY_CLIENT_SECRET")
+        return missing
 
     @property
     def is_configured(self) -> bool:
@@ -236,11 +293,14 @@ class Settings(BaseSettings):
                 "configured": self.xray.is_configured,
                 "base_url": self.xray.base_url,
                 "auth_mode": self.xray.auth_mode,
+                "deployment": self.xray.deployment,
+                "xray_api_available": self.xray.has_xray_api,
                 "project_key": self.xray.project_key,
                 "api_version": self.xray.api_version,
                 "custom_fields": sorted(self.xray.custom_fields),
                 # Deliberately never the token itself.
                 "credentials": "set" if self.xray.api_token else "unset",
+                "xray_api_key": "set" if self.xray.client_secret else "unset",
             },
         }
 

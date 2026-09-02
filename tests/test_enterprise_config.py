@@ -502,3 +502,266 @@ class TestCheckConfigCommand:
             main()
 
         assert excinfo.value.code == 2
+
+
+CLOUD_TENANT = {
+    **TENANT,
+    "QA_MCP_XRAY_DEPLOYMENT": "cloud",
+    "QA_MCP_XRAY_CLIENT_ID": "XRAY-CLIENT-ID",
+    "QA_MCP_XRAY_CLIENT_SECRET": "XRAY-CLIENT-SECRET",
+}
+
+SERVER_TENANT = {
+    **TENANT,
+    "QA_MCP_XRAY_DEPLOYMENT": "server",
+    "QA_MCP_XRAY_AUTH_MODE": "token",
+    "QA_MCP_XRAY_API_VERSION": "2",
+}
+
+PAYLOAD_WITH_STEPS = {
+    "testtype": "Manual",
+    "fields": {"summary": "Login test", "project": {"key": "QA"}},
+    "steps": [
+        {"action": "Go to /login", "result": "Form is shown"},
+        {"action": "Submit credentials", "data": "user=test", "result": "Dashboard opens"},
+    ],
+}
+
+
+class TestXrayCloudApi:
+    """Xray Cloud keeps test steps outside Jira, behind its own API."""
+
+    @pytest.fixture
+    def cloud_env(self, monkeypatch):
+        for key, value in CLOUD_TENANT.items():
+            monkeypatch.setenv(key, value)
+        monkeypatch.setenv("QA_MCP_ENABLE_WRITE_TOOLS", "true")
+
+    def _handler(self, seen: dict):
+        def handler(request: httpx.Request) -> httpx.Response:
+            path = request.url.path
+            if path.endswith("/api/v2/authenticate"):
+                seen["auth_body"] = json.loads(request.content)
+                return httpx.Response(200, json="JWT-TOKEN")
+            if path.endswith("/api/v2/graphql"):
+                seen["graphql"] = json.loads(request.content)
+                seen["graphql_auth"] = request.headers.get("authorization")
+                return httpx.Response(
+                    200,
+                    json={
+                        "data": {
+                            "createTest": {
+                                "test": {"issueId": "10001", "jira": {"key": "QA-99"}},
+                                "warnings": [],
+                            }
+                        }
+                    },
+                )
+            return _ok_handler(request)
+
+        return handler
+
+    def test_create_uses_graphql_and_carries_the_steps(self, cloud_env):
+        """Regression: steps were sent to the Jira issue API, which drops them."""
+        seen: dict = {}
+        with XrayClient(Settings(), transport=_mock_transport(self._handler(seen))) as client:
+            result = client.create_test(PAYLOAD_WITH_STEPS)
+
+        assert result["api_used"] == "xray-cloud-graphql"
+        assert result["issue_key"] == "QA-99"
+        assert result["steps_imported"] == 2
+
+        variables = seen["graphql"]["variables"]
+        assert variables["steps"][0]["action"] == "Go to /login"
+        assert variables["steps"][1]["data"] == "user=test"
+        assert variables["jira"]["fields"]["summary"] == "Login test"
+
+    def test_values_travel_as_graphql_variables(self, cloud_env):
+        """A summary with quotes or braces must not be able to corrupt the query."""
+        seen: dict = {}
+        payload = {
+            **PAYLOAD_WITH_STEPS,
+            "fields": {"summary": 'He said "hi" } { ', "project": {"key": "QA"}},
+        }
+        with XrayClient(Settings(), transport=_mock_transport(self._handler(seen))) as client:
+            client.create_test(payload)
+
+        assert 'He said "hi"' not in seen["graphql"]["query"]
+        assert seen["graphql"]["variables"]["jira"]["fields"]["summary"] == 'He said "hi" } { '
+
+    def test_the_api_key_is_exchanged_for_a_bearer_token(self, cloud_env):
+        seen: dict = {}
+        with XrayClient(Settings(), transport=_mock_transport(self._handler(seen))) as client:
+            client.create_test(PAYLOAD_WITH_STEPS)
+
+        assert seen["auth_body"] == {
+            "client_id": "XRAY-CLIENT-ID",
+            "client_secret": "XRAY-CLIENT-SECRET",
+        }
+        assert seen["graphql_auth"] == "Bearer JWT-TOKEN"
+
+    def test_the_token_is_reused_across_calls(self, cloud_env):
+        """The token is valid for 24 hours; re-authenticating per call is waste."""
+        calls = {"auth": 0}
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.url.path.endswith("/api/v2/authenticate"):
+                calls["auth"] += 1
+                return httpx.Response(200, json="JWT-TOKEN")
+            if request.url.path.endswith("/api/v2/graphql"):
+                return httpx.Response(
+                    200,
+                    json={
+                        "data": {
+                            "createTest": {
+                                "test": {"issueId": "1", "jira": {"key": "QA-1"}},
+                                "warnings": [],
+                            }
+                        }
+                    },
+                )
+            return _ok_handler(request)
+
+        with XrayClient(Settings(), transport=_mock_transport(handler)) as client:
+            client.create_test(PAYLOAD_WITH_STEPS)
+            client.create_test(PAYLOAD_WITH_STEPS)
+
+        assert calls["auth"] == 1
+
+    def test_a_graphql_error_is_surfaced(self, cloud_env):
+        """GraphQL reports failures inside a 200 response."""
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.url.path.endswith("/api/v2/authenticate"):
+                return httpx.Response(200, json="JWT-TOKEN")
+            if request.url.path.endswith("/api/v2/graphql"):
+                return httpx.Response(200, json={"errors": [{"message": "Project not found"}]})
+            return _ok_handler(request)
+
+        with (
+            XrayClient(Settings(), transport=_mock_transport(handler)) as client,
+            pytest.raises(XrayError, match="Project not found"),
+        ):
+            client.create_test(PAYLOAD_WITH_STEPS)
+
+    def test_bad_api_key_names_the_variables(self, cloud_env):
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.url.path.endswith("/api/v2/authenticate"):
+                return httpx.Response(401, text="Unauthorized")
+            return _ok_handler(request)
+
+        with (
+            XrayClient(Settings(), transport=_mock_transport(handler)) as client,
+            pytest.raises(XrayError, match="QA_MCP_XRAY_CLIENT_ID"),
+        ):
+            client.create_test(PAYLOAD_WITH_STEPS)
+
+
+class TestStepsAreNeverSilentlyDropped:
+    """The whole point of routing by deployment."""
+
+    def test_cloud_without_an_api_key_refuses_a_test_with_steps(self, tenant_env, monkeypatch):
+        """Creating it through Jira alone would look like success and lose the steps."""
+        monkeypatch.setenv("QA_MCP_XRAY_DEPLOYMENT", "cloud")
+        monkeypatch.setenv("QA_MCP_ENABLE_WRITE_TOOLS", "true")
+        monkeypatch.delenv("QA_MCP_XRAY_CLIENT_ID", raising=False)
+        monkeypatch.delenv("QA_MCP_XRAY_CLIENT_SECRET", raising=False)
+
+        with (
+            XrayClient(Settings(), transport=_mock_transport(_ok_handler)) as client,
+            pytest.raises(XrayError, match="QA_MCP_XRAY_CLIENT_ID"),
+        ):
+            client.create_test(PAYLOAD_WITH_STEPS)
+
+    def test_a_test_without_steps_is_still_allowed(self, tenant_env, monkeypatch):
+        monkeypatch.setenv("QA_MCP_XRAY_DEPLOYMENT", "cloud")
+        monkeypatch.setenv("QA_MCP_ENABLE_WRITE_TOOLS", "true")
+
+        with XrayClient(Settings(), transport=_mock_transport(_ok_handler)) as client:
+            result = client.create_test({"fields": {"summary": "No steps"}})
+
+        assert result["created"] is True
+        assert result["steps_imported"] == 0
+
+
+class TestXrayServerApi:
+    """Server/Data Center serves Xray from the Jira host under /rest/raven."""
+
+    @pytest.fixture
+    def server_env(self, monkeypatch):
+        for key, value in SERVER_TENANT.items():
+            monkeypatch.setenv(key, value)
+        monkeypatch.setenv("QA_MCP_ENABLE_WRITE_TOOLS", "true")
+
+    def test_steps_are_posted_to_the_raven_endpoint(self, server_env):
+        paths: list[str] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            paths.append(request.url.path)
+            if "/rest/raven/" in request.url.path:
+                return httpx.Response(200, json={})
+            return _ok_handler(request)
+
+        with XrayClient(Settings(), transport=_mock_transport(handler)) as client:
+            result = client.create_test(PAYLOAD_WITH_STEPS)
+
+        assert result["api_used"] == "jira-rest+xray-raven"
+        assert result["steps_imported"] == 2
+        assert sum("/rest/raven/1.0/api/test/QA-42/step" in p for p in paths) == 2
+
+    def test_a_failed_step_upload_is_reported_not_hidden(self, server_env):
+        """The issue exists but is incomplete; saying nothing would be worse."""
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            if "/rest/raven/" in request.url.path:
+                return httpx.Response(500, text="boom")
+            return _ok_handler(request)
+
+        with XrayClient(Settings(), transport=_mock_transport(handler)) as client:
+            result = client.create_test(PAYLOAD_WITH_STEPS)
+
+        assert result["created"] is True
+        assert result["steps_imported"] == 0
+        assert any("adımdan 0 tanesi" in w for w in result["warnings"])
+
+    def test_server_needs_no_xray_api_key(self, server_env):
+        assert Settings().xray.has_xray_api is True
+        assert Settings().xray.missing_xray_api_settings == []
+
+
+class TestConnectionReportsXrayReachability:
+    def test_cloud_without_an_api_key_says_so(self, tenant_env, monkeypatch):
+        monkeypatch.setenv("QA_MCP_XRAY_DEPLOYMENT", "cloud")
+        monkeypatch.delenv("QA_MCP_XRAY_CLIENT_ID", raising=False)
+
+        with XrayClient(Settings(), transport=_mock_transport(_ok_handler)) as client:
+            status = client.verify_connection()
+
+        assert status["connected"] is True
+        assert status["xray_api"]["reachable"] is False
+        assert "QA_MCP_XRAY_CLIENT_ID" in status["xray_api"]["missing_settings"]
+
+    def test_cloud_with_an_api_key_verifies_it(self, monkeypatch):
+        for key, value in CLOUD_TENANT.items():
+            monkeypatch.setenv(key, value)
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            if request.url.path.endswith("/api/v2/authenticate"):
+                return httpx.Response(200, json="JWT-TOKEN")
+            return _ok_handler(request)
+
+        with XrayClient(Settings(), transport=_mock_transport(handler)) as client:
+            status = client.verify_connection()
+
+        assert status["xray_api"]["reachable"] is True
+        assert status["deployment"] == "cloud"
+
+    def test_server_reaches_xray_with_the_jira_credentials(self, monkeypatch):
+        for key, value in SERVER_TENANT.items():
+            monkeypatch.setenv(key, value)
+
+        with XrayClient(Settings(), transport=_mock_transport(_ok_handler)) as client:
+            status = client.verify_connection()
+
+        assert status["xray_api"]["reachable"] is True
+        assert status["deployment"] == "server"

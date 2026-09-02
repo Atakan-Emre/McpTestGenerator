@@ -14,11 +14,26 @@ Two rules shape this module:
   ``enable_write_tools`` itself, rather than trusting the caller to have
   checked, so a mistake in tool registration cannot create issues in someone's
   Jira.
+
+Jira and Xray are two different APIs, and which one is needed depends on the
+deployment:
+
+* **Jira REST** (``/rest/api/{2,3}``) reads and creates issues. Both
+  deployments use it, authenticated with the Jira credentials.
+* **Xray Cloud** keeps test steps outside Jira entirely and exposes them only
+  through its GraphQL API at ``xray.cloud.getxray.app``, authenticated with a
+  separate Xray API Key (client id + secret) exchanged for a 24-hour token.
+* **Xray Server/Data Center** serves the same data over REST under
+  ``/rest/raven/``, on the Jira host and with the Jira credentials.
+
+Creating a Test through the Jira issue API alone produces an issue with no
+steps. That is the trap this module exists to avoid.
 """
 
 from __future__ import annotations
 
 import base64
+from datetime import datetime, timedelta
 from types import TracebackType
 from typing import Any
 
@@ -58,6 +73,10 @@ class XrayError(RuntimeError):
             "detail": self.body_excerpt,
         }
 
+
+# Xray Server/Data Center serves test steps from its 1.0 endpoints, which
+# remain available under the 2.0 API.
+XRAY_SERVER_API_VERSION = "1.0"
 
 # Status codes worth explaining rather than echoing.
 _STATUS_HINTS = {
@@ -99,6 +118,11 @@ class XrayClient:
                 "QA_MCP_XRAY_BASE_URL ve QA_MCP_XRAY_API_TOKEN değerlerini ayarlayın."
             )
 
+        self._transport = transport
+        self._cloud_client: httpx.Client | None = None
+        self._cloud_token: str | None = None
+        self._cloud_token_expires: datetime | None = None
+
         self._client = httpx.Client(
             base_url=f"{xray.base_url}/rest/api/{xray.api_version}",
             headers=self._auth_headers(),
@@ -123,6 +147,8 @@ class XrayClient:
 
     def close(self) -> None:
         self._client.close()
+        if self._cloud_client is not None:
+            self._cloud_client.close()
 
     # -- internals ---------------------------------------------------------
 
@@ -201,25 +227,153 @@ class XrayClient:
                 "Bilinçli olarak etkinleştirmek için QA_MCP_ENABLE_WRITE_TOOLS=true ayarlayın."
             )
 
+    # -- Xray Cloud API ----------------------------------------------------
+
+    def _cloud(self) -> httpx.Client:
+        """Client for the Xray Cloud API host, built on first use."""
+        if self._cloud_client is None:
+            xray = self.settings.xray
+            self._cloud_client = httpx.Client(
+                base_url=xray.cloud_base_url,
+                timeout=xray.timeout_seconds,
+                verify=xray.verify_tls,
+                transport=self._transport
+                or httpx.HTTPTransport(retries=xray.max_retries, verify=xray.verify_tls),
+                headers={"Content-Type": "application/json", "Accept": "application/json"},
+            )
+        return self._cloud_client
+
+    def _cloud_authorization(self) -> str:
+        """Exchange the Xray API Key for a bearer token, reusing it until it ages out.
+
+        The token Xray issues is valid for 24 hours; it is cached for slightly
+        less so a long-running server never presents an expired one.
+        """
+        now = datetime.now()
+        if self._cloud_token and self._cloud_token_expires and now < self._cloud_token_expires:
+            return self._cloud_token
+
+        xray = self.settings.xray
+        if not (xray.client_id and xray.client_secret):
+            raise XrayError(
+                "Xray Cloud API anahtarı yok. Xray Global Settings -> API Keys altından "
+                "bir anahtar oluşturup QA_MCP_XRAY_CLIENT_ID ve QA_MCP_XRAY_CLIENT_SECRET "
+                "değerlerini ayarlayın. Bu, Jira API token'ından farklı bir kimliktir."
+            )
+
+        response = self._cloud().post(
+            "/api/v2/authenticate",
+            json={
+                "client_id": xray.client_id,
+                "client_secret": xray.client_secret.get_secret_value(),
+            },
+        )
+        if not response.is_success:
+            raise XrayError(
+                f"Xray Cloud kimlik doğrulaması başarısız (HTTP {response.status_code}). "
+                "QA_MCP_XRAY_CLIENT_ID ve QA_MCP_XRAY_CLIENT_SECRET değerlerini kontrol edin.",
+                status_code=response.status_code,
+                method="POST",
+                path="/api/v2/authenticate",
+                body_excerpt=response.text[:200],
+            )
+
+        # The endpoint answers with the bare token as a JSON string.
+        token = response.json()
+        if not isinstance(token, str) or not token:
+            raise XrayError(
+                "Xray Cloud beklenmeyen bir kimlik doğrulama yanıtı döndü.",
+                method="POST",
+                path="/api/v2/authenticate",
+                body_excerpt=response.text[:200],
+            )
+
+        self._cloud_token = token
+        self._cloud_token_expires = now + timedelta(hours=23)
+        return token
+
+    def _graphql(self, query: str, variables: dict[str, Any]) -> dict[str, Any]:
+        """Run a GraphQL operation against Xray Cloud.
+
+        Values travel as variables rather than interpolated text, so a summary
+        containing quotes or braces cannot corrupt - or inject into - the query.
+        """
+        response = self._cloud().post(
+            "/api/v2/graphql",
+            json={"query": query, "variables": variables},
+            headers={"Authorization": f"Bearer {self._cloud_authorization()}"},
+        )
+        if not response.is_success:
+            raise XrayError(
+                f"Xray Cloud GraphQL isteği başarısız (HTTP {response.status_code}).",
+                status_code=response.status_code,
+                method="POST",
+                path="/api/v2/graphql",
+                body_excerpt=response.text[:300],
+            )
+
+        payload = response.json()
+        # GraphQL reports failures inside a 200 response.
+        if payload.get("errors"):
+            messages = "; ".join(
+                str(e.get("message", e)) for e in payload["errors"] if isinstance(e, dict)
+            )
+            raise XrayError(
+                f"Xray Cloud GraphQL hatası: {messages or payload['errors']}",
+                method="POST",
+                path="/api/v2/graphql",
+            )
+        return payload.get("data") or {}
+
     # -- read operations ---------------------------------------------------
 
     def verify_connection(self) -> dict[str, Any]:
-        """Confirm the credentials work, and report who they belong to.
+        """Confirm the credentials work, and report exactly what they reach.
 
-        The first thing to run after handing QA-MCP a token.
+        Jira and Xray are separate services on Cloud, so a working Jira token
+        does not imply Xray access. This reports both, and names the variables
+        still missing rather than leaving the gap to be discovered on the first
+        write.
         """
+        xray = self.settings.xray
         user = self._request("GET", "/myself")
+
+        xray_api: dict[str, Any] = {
+            "reachable": False,
+            "detail": None,
+            "missing_settings": xray.missing_xray_api_settings,
+        }
+        if xray.has_xray_api:
+            if xray.is_cloud:
+                try:
+                    self._cloud_authorization()
+                    xray_api["reachable"] = True
+                    xray_api["detail"] = "Xray Cloud API anahtarı doğrulandı"
+                except XrayError as exc:
+                    xray_api["detail"] = str(exc)
+            else:
+                # Server/DC reaches Xray with the Jira credentials already proven above.
+                xray_api["reachable"] = True
+                xray_api["detail"] = "Xray Server/DC, Jira kimlik bilgileriyle erişilebilir"
+        else:
+            xray_api["detail"] = (
+                "Xray API anahtarı ayarlanmamış; test adımları aktarılamaz. "
+                f"Eksik: {', '.join(xray.missing_xray_api_settings)}"
+            )
+
         return {
             "connected": True,
-            "base_url": self.settings.xray.base_url,
-            "api_version": self.settings.xray.api_version,
-            "auth_mode": self.settings.xray.auth_mode,
+            "base_url": xray.base_url,
+            "api_version": xray.api_version,
+            "auth_mode": xray.auth_mode,
+            "deployment": xray.deployment,
             "account": {
                 "display_name": user.get("displayName"),
                 "email": user.get("emailAddress"),
                 "account_id": user.get("accountId"),
                 "active": user.get("active"),
             },
+            "xray_api": xray_api,
             "write_tools_enabled": self.settings.enable_write_tools,
         }
 
@@ -267,7 +421,17 @@ class XrayClient:
     # -- write operations --------------------------------------------------
 
     def create_test(self, xray_payload: dict[str, Any]) -> dict[str, Any]:
-        """Create a test issue from a payload built by ``testcase_to_xray``.
+        """Create a Test issue from a payload built by ``testcase_to_xray``.
+
+        Routes by deployment, because the two store test steps in different
+        places:
+
+        * **Cloud** - one GraphQL ``createTest`` carrying the steps.
+        * **Server/DC** - create the Jira issue, then post each step to Xray's
+          REST endpoint on the same host.
+
+        A payload with steps is never created through the Jira issue API alone:
+        that yields a Test with no steps, which looks like success and is not.
 
         Gated behind ``QA_MCP_ENABLE_WRITE_TOOLS``.
         """
@@ -286,14 +450,147 @@ class XrayClient:
                 )
             fields["project"] = {"key": key}
 
+        steps = [
+            {
+                "action": str(step.get("action", "")),
+                "data": str(step.get("data", "")),
+                "result": str(step.get("result", "")),
+            }
+            for step in xray_payload.get("steps") or []
+        ]
+        test_type = xray_payload.get("testtype") or self.settings.xray.test_issue_type
+
+        if steps and not self.settings.xray.has_xray_api:
+            missing = ", ".join(self.settings.xray.missing_xray_api_settings)
+            raise XrayError(
+                f"Bu test case {len(steps)} adım içeriyor ancak Xray API'sine erişim yok, "
+                "dolayısıyla adımlar aktarılamaz. Jira issue API'si tek başına adımsız bir "
+                f"Test oluşturur. Eksik ayar(lar): {missing}."
+            )
+
+        if self.settings.xray.is_cloud and steps:
+            return self._create_test_cloud(fields, steps, test_type)
+        return self._create_test_server(fields, steps)
+
+    def _create_test_cloud(
+        self,
+        fields: dict[str, Any],
+        steps: list[dict[str, str]],
+        test_type: str,
+    ) -> dict[str, Any]:
+        """Create a Test with its steps in a single Xray Cloud GraphQL call."""
+        mutation = """
+        mutation CreateTest($testType: UpdateTestTypeInput!, $steps: [CreateStepInput], $jira: JSON!) {
+          createTest(testType: $testType, steps: $steps, jira: $jira) {
+            test {
+              issueId
+              jira(fields: ["key"])
+            }
+            warnings
+          }
+        }
+        """
+        data = self._graphql(
+            mutation,
+            {
+                "testType": {"name": test_type},
+                "steps": steps,
+                "jira": {"fields": fields},
+            },
+        )
+        result = (data.get("createTest") or {}).get("test") or {}
+        key = (result.get("jira") or {}).get("key")
+        return {
+            "created": True,
+            "issue_key": key,
+            "issue_id": result.get("issueId"),
+            "url": f"{self.settings.xray.base_url}/browse/{key}" if key else None,
+            "steps_imported": len(steps),
+            "api_used": "xray-cloud-graphql",
+            "warnings": (data.get("createTest") or {}).get("warnings") or [],
+        }
+
+    def _create_test_server(
+        self,
+        fields: dict[str, Any],
+        steps: list[dict[str, str]],
+    ) -> dict[str, Any]:
+        """Create the Jira issue, then attach steps through Xray's REST API.
+
+        Server/Data Center has no single call that does both, so the issue can
+        exist while a later step upload fails. That partial state is reported
+        rather than hidden: the caller gets the issue key and the count that
+        actually landed.
+        """
         created = self._request("POST", "/issue", json={"fields": fields})
         key = created.get("key")
+
+        imported = 0
+        warnings: list[str] = []
+        if steps and key:
+            for index, step in enumerate(steps, 1):
+                try:
+                    self._raven_request(
+                        "POST",
+                        f"/api/test/{key}/step",
+                        json={
+                            "step": step["action"],
+                            "data": step["data"],
+                            "result": step["result"],
+                        },
+                    )
+                    imported += 1
+                except XrayError as exc:
+                    warnings.append(f"Adım {index} aktarılamadı: {exc}")
+                    break
+
+        if steps and imported < len(steps):
+            warnings.append(
+                f"{key} oluşturuldu ancak {len(steps)} adımdan {imported} tanesi aktarıldı. "
+                "Test'i Jira'da kontrol edin."
+            )
+
         return {
             "created": True,
             "issue_key": key,
             "issue_id": created.get("id"),
             "url": f"{self.settings.xray.base_url}/browse/{key}" if key else None,
+            "steps_imported": imported,
+            "api_used": "jira-rest+xray-raven" if steps else "jira-rest",
+            "warnings": warnings,
         }
+
+    def _raven_request(self, method: str, path: str, **kwargs: Any) -> dict[str, Any]:
+        """Call Xray's Server/Data Center REST API.
+
+        It lives on the Jira host under /rest/raven and accepts the same
+        credentials, so only the base path differs.
+        """
+        base = f"{self.settings.xray.base_url}/rest/raven/{XRAY_SERVER_API_VERSION}"
+        try:
+            response = self._client.request(method, f"{base}{path}", **kwargs)
+        except httpx.HTTPError as exc:
+            raise XrayError(
+                f"Xray (raven) API'sine bağlanılamadı: {exc}", method=method, path=path
+            ) from exc
+
+        if response.is_success:
+            if not response.content:
+                return {}
+            try:
+                payload = response.json()
+            except ValueError:
+                return {}
+            return payload if isinstance(payload, dict) else {"value": payload}
+
+        raise XrayError(
+            f"Xray {method} {path} -> HTTP {response.status_code}. "
+            f"{_STATUS_HINTS.get(response.status_code, '')}".strip(),
+            status_code=response.status_code,
+            method=method,
+            path=path,
+            body_excerpt=response.text[:300],
+        )
 
 
 def _summarize_issue(issue: dict[str, Any]) -> dict[str, Any]:

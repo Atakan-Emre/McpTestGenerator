@@ -36,7 +36,7 @@ It works with **zero configuration** and never touches the network. Give it your
 - **🚀 Standardized Generation:** Automatically generate high-quality, structured test cases from feature descriptions and acceptance criteria.
 - **🛠️ Smart Normalization:** Seamlessly convert Gherkin, Markdown, JSON, and plain text into the canonical QA-MCP schema.
 - **📈 Advanced Linting & Scoring:** Evaluate test cases against a shared QA schema with detailed scores, issue tracking, and improvement guidance — including rules for hardcoded credentials and non-parameterized test data.
-- **🔗 Xray Ready:** Convert standardized test cases into Xray-compatible JSON payloads, and — once a tenant is configured — read and create issues directly.
+- **🔗 Xray Ready:** Convert standardized test cases into Xray-compatible JSON payloads, and — once a tenant is configured — read and create real Xray tests. Uses Xray Cloud's GraphQL API and Server/DC's `/rest/raven` REST API, so **test steps actually travel with the issue** instead of being dropped by the Jira issue API.
 - **📦 Suite Composition:** Compose Smoke, Sanity, Regression, E2E, Integration, and Performance suites, each with its own selection rules.
 - **📊 Coverage Reporting:** Track requirement, module, risk, and scenario coverage, and report which inputs were skipped rather than silently dropping them.
 - **🧩 Modern MCP Surface:** Typed `structuredContent` results whose schemas are generated from the result models, read-only tool annotations, display titles, resource templates, and argument completion.
@@ -104,7 +104,7 @@ Configure your preferred MCP client (e.g., Claude Desktop) to use QA-MCP.
 }
 ```
 
-**With your own Jira/Xray tenant:**
+**With your own Jira/Xray tenant** (a stdio MCP server does not inherit your shell environment, so credentials go in the client's `env` block):
 
 ```json
 {
@@ -116,13 +116,21 @@ Configure your preferred MCP client (e.g., Claude Desktop) to use QA-MCP.
         "QA_MCP_XRAY_BASE_URL": "https://your-tenant.atlassian.net",
         "QA_MCP_XRAY_AUTH_MODE": "basic",
         "QA_MCP_XRAY_EMAIL": "qa-automation@your-company.com",
-        "QA_MCP_XRAY_API_TOKEN": "<token>",
+        "QA_MCP_XRAY_API_TOKEN": "<Jira API token>",
+        "QA_MCP_XRAY_CLIENT_ID": "<Xray API Key client id>",
+        "QA_MCP_XRAY_CLIENT_SECRET": "<Xray API Key client secret>",
         "QA_MCP_XRAY_PROJECT_KEY": "QA"
       }
     }
   }
 }
 ```
+
+On **Jira Cloud these are two different credentials**: a Jira API token for
+issues, and an Xray API Key for test steps, which Xray keeps outside Jira. On
+**Server/Data Center** one personal access token covers both. QA-MCP refuses to
+create a test whose steps it cannot import rather than silently producing an
+empty one.
 
 Full walkthrough: **[docs/ENTERPRISE-SETUP.md](docs/ENTERPRISE-SETUP.md)**.
 
@@ -193,7 +201,9 @@ The first three are read-only. `xray_create_test` is the only tool that changes 
 | `QA_MCP_LINT_DISABLED_RULES` | `[]` | Rule ids your team does not enforce, as a JSON array. |
 | `QA_MCP_XRAY_ENABLED` | `false` | Allow QA-MCP to contact Jira/Xray. |
 | `QA_MCP_XRAY_BASE_URL` | — | Jira base URL. |
-| `QA_MCP_XRAY_API_TOKEN` | — | API token or personal access token. |
+| `QA_MCP_XRAY_DEPLOYMENT` | `cloud` | `cloud` or `server`; decides which Xray API is used. |
+| `QA_MCP_XRAY_API_TOKEN` | — | Jira API token or personal access token. |
+| `QA_MCP_XRAY_CLIENT_ID` / `_CLIENT_SECRET` | — | Xray Cloud API Key; required for test steps on Cloud. |
 | `QA_MCP_ENABLE_WRITE_TOOLS` | `false` | Publish `xray_create_test`, which writes to Jira. |
 
 Full reference — including Jira Cloud vs Server/Data Center authentication, per-tenant custom field ids, and credential handling — in **[docs/ENTERPRISE-SETUP.md](docs/ENTERPRISE-SETUP.md)** and [`.env.example`](.env.example).
@@ -268,7 +278,7 @@ Tutarsız manuel QA dokümanlarına veda edin. İster ham feature açıklamasın
   - **🚀 Standart Üretim:** Feature metinlerinden ve kabul kriterlerinden otomatik olarak yüksek kaliteli, yapılandırılmış test case'ler üretin.
   - **🛠️ Akıllı Normalizasyon:** Gherkin, Markdown, JSON ve düz metinleri standart QA-MCP şemasına sorunsuz dönüştürün.
   - **📈 Gelişmiş Linting ve Skorlama:** Test senaryolarını ortak kalite şemasına göre değerlendirin; hardcoded credential ve parametrik olmayan test verisi kuralları dahil detaylı skor, hata ve iyileştirme adımları alın.
-  - **🔗 Xray Entegrasyonu:** Standart test case'leri Xray uyumlu JSON payload'larına dönüştürün; tenant bağlıysa doğrudan issue okuyup oluşturun.
+  - **🔗 Xray Entegrasyonu:** Standart test case'leri Xray uyumlu JSON payload'larına dönüştürün; tenant bağlıysa gerçek Xray test'leri okuyup oluşturun. Xray Cloud'da GraphQL, Server/DC'de `/rest/raven` REST API'si kullanılır — böylece **test adımları issue ile birlikte gider**, Jira issue API'sinde olduğu gibi düşmez.
   - **📦 Suite Yönetimi:** Smoke, Sanity, Regression, E2E, Integration ve Performance suitlerini, her biri kendi seçim kurallarıyla oluşturun.
   - **📊 Kapsam Raporlama:** Gereksinim, modül, risk ve senaryo kapsamını izleyin; standarda uymayan girdiler sessizce atılmaz, raporlanır.
   - **🧩 Güncel MCP Yüzeyi:** Şemaları sonuç modellerinden üretilen tipli `structuredContent`, read-only tool annotation'ları, görünen adlar, resource template ve argüman tamamlama.
@@ -335,13 +345,24 @@ Tercih ettiğiniz MCP istemcisini (örn. Claude Desktop) QA-MCP kullanacak şeki
         "QA_MCP_XRAY_BASE_URL": "https://sirketiniz.atlassian.net",
         "QA_MCP_XRAY_AUTH_MODE": "basic",
         "QA_MCP_XRAY_EMAIL": "qa-automation@sirketiniz.com",
-        "QA_MCP_XRAY_API_TOKEN": "<token>",
+        "QA_MCP_XRAY_API_TOKEN": "<Jira API token>",
+        "QA_MCP_XRAY_CLIENT_ID": "<Xray API Key client id>",
+        "QA_MCP_XRAY_CLIENT_SECRET": "<Xray API Key client secret>",
         "QA_MCP_XRAY_PROJECT_KEY": "QA"
       }
     }
   }
 }
 ```
+
+**Jira Cloud'da bunlar iki ayrı kimliktir:** issue'lar için Jira API token'ı,
+test adımları için Xray API Key. Xray, adımları Jira'nın dışında tutar.
+**Server/Data Center'da** tek bir personal access token ikisini de karşılar.
+QA-MCP, adımlarını aktaramayacağı bir test'i sessizce boş oluşturmak yerine
+reddeder.
+
+stdio MCP sunucusu shell ortamınızı miras almaz; kimlik bilgileri istemcinin
+`env` bloğuna yazılır.
 
 Adım adım kurulum: **[docs/ENTERPRISE-SETUP.md](docs/ENTERPRISE-SETUP.md)**.
 
@@ -412,7 +433,9 @@ Bu dokuz tool saf fonksiyondur: hiçbir şey kalıcılaştırmaz, dış sisteme 
 | `QA_MCP_LINT_DISABLED_RULES` | `[]` | Ekibinizin uygulamadığı kural id'leri (JSON dizi). |
 | `QA_MCP_XRAY_ENABLED` | `false` | Jira/Xray bağlantısına izin verir. |
 | `QA_MCP_XRAY_BASE_URL` | — | Jira temel adresi. |
-| `QA_MCP_XRAY_API_TOKEN` | — | API token veya personal access token. |
+| `QA_MCP_XRAY_DEPLOYMENT` | `cloud` | `cloud` veya `server`; hangi Xray API'sinin kullanılacağını belirler. |
+| `QA_MCP_XRAY_API_TOKEN` | — | Jira API token veya personal access token. |
+| `QA_MCP_XRAY_CLIENT_ID` / `_CLIENT_SECRET` | — | Xray Cloud API Key; Cloud'da test adımları için gerekli. |
 | `QA_MCP_ENABLE_WRITE_TOOLS` | `false` | Jira'ya yazan `xray_create_test` tool'unu yayınlar. |
 
 Tam referans — Jira Cloud ve Server/Data Center kimlik doğrulama farkları, tenant'a özel custom field id'leri ve kimlik bilgisi yönetimi dahil — **[docs/ENTERPRISE-SETUP.md](docs/ENTERPRISE-SETUP.md)** ve [`.env.example`](.env.example) dosyalarındadır.

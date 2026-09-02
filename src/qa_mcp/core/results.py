@@ -209,12 +209,20 @@ class XrayAccount(_Result):
     active: bool | None = None
 
 
+class XrayApiStatus(_Result):
+    reachable: bool = Field(description="Whether Xray's own API (test steps) is reachable")
+    detail: str | None = None
+    missing_settings: list[str] = Field(default_factory=list)
+
+
 class XrayConnectionStatus(_Result):
     connected: bool
     base_url: str | None = None
     api_version: str | None = None
     auth_mode: str | None = None
+    deployment: str | None = Field(None, description="'cloud' or 'server'")
     account: XrayAccount
+    xray_api: XrayApiStatus | None = None
     write_tools_enabled: bool
 
 
@@ -241,6 +249,9 @@ class XrayCreateResult(_Result):
     issue_key: str | None = None
     issue_id: str | None = None
     url: str | None = None
+    steps_imported: int = Field(0, description="How many test steps actually landed in Xray")
+    api_used: str | None = Field(None, description="Which API created the test")
+    warnings: list[str] = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------

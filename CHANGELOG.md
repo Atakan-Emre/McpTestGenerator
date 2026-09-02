@@ -9,6 +9,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.1.0] - 2026-09-02
+
+### Fixed
+- **Test steps were silently dropped when creating an Xray test.** Creation went
+  through the Jira issue API, which stores no test steps: on Xray Cloud they
+  live outside Jira entirely, reachable only through Xray's GraphQL API, and on
+  Server/Data Center they are served from `/rest/raven`. The call reported
+  success and produced a Test with no steps. Creation now routes by deployment,
+  and a test whose steps cannot be imported is refused rather than created empty
+- `xray_create_test` reports `steps_imported` and `api_used`, so a partial
+  import on Server/DC — where creating the issue and posting the steps are
+  separate calls — is visible instead of hidden
+
+### Added
+- `QA_MCP_XRAY_DEPLOYMENT` (`cloud` or `server`), which selects the Xray API
+- `QA_MCP_XRAY_CLIENT_ID` / `QA_MCP_XRAY_CLIENT_SECRET`: the Xray Cloud API Key.
+  On Cloud, Jira and Xray are separate services with separate credentials — a
+  Jira API token does not reach test steps. The key is exchanged for a token at
+  `/api/v2/authenticate` and reused until it ages out
+- `xray_verify_connection` now reports whether Xray's own API is reachable and
+  names the variables still missing, rather than leaving the gap to surface on
+  the first write
+
+### Security
+- GraphQL values travel as variables rather than interpolated text, so a summary
+  containing quotes or braces cannot corrupt or inject into the query
+
+### Documentation
+- `docs/ENTERPRISE-SETUP.md` gains a section on where credentials belong: a
+  stdio MCP server does not inherit the shell environment, so an MCP client's
+  `env` block is the right place and `.env` is for Docker, systemd and local
+  development. QA-MCP never prompts for a token, which would put it in the
+  model's context
+
+---
+
 ## [2.0.0] - 2026-09-02
 
 Migrates to the mcp 2.x SDK and makes QA-MCP configurable for an organisation

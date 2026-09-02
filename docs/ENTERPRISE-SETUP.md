@@ -37,32 +37,83 @@ Nine tools, five resources, four prompts. Nothing leaves the process.
 
 ---
 
-## 2. Connect a Jira/Xray tenant
+## 2. Where the credentials go
 
-Copy [`.env.example`](../.env.example) to `.env`, or set the variables directly
-— in Docker and Kubernetes you want the latter.
+A stdio MCP server **does not inherit your shell environment**, and `.env` is
+read relative to the server's working directory, which the client chooses. So
+the answer depends on how QA-MCP is launched:
 
-### Jira Cloud
+| Launched by | Put the credentials in |
+| --- | --- |
+| An MCP client (Claude Desktop, Cursor, …) | the client config's `env` block — see [§6](#6-client-configuration) |
+| Docker | `--env-file .env`, or your orchestrator's secrets |
+| systemd / a shell | real environment variables, or `.env` in the working directory |
+
+`.env.example` exists for the second and third rows. Copy it to `.env` and fill
+it in; `.env` is git-ignored and the example carries no real values.
+
+**QA-MCP never asks for a token interactively.** An MCP server can prompt the
+user mid-call, but the answer would travel through the model's context and into
+the transcript. Credentials are read from the environment at startup instead,
+where the model never sees them.
+
+For a shared repository, reference variables rather than pasting secrets:
+
+```json
+{ "env": { "QA_MCP_XRAY_API_TOKEN": "${QA_MCP_XRAY_API_TOKEN}" } }
+```
+
+---
+
+## 3. Connect a Jira/Xray tenant
+
+### Jira Cloud needs two credentials
+
+This surprises people, so it is worth stating plainly: **Jira and Xray are
+separate services on Cloud, with separate credentials.**
+
+| Credential | Where it comes from | What it reaches |
+| --- | --- | --- |
+| Jira API token | <https://id.atlassian.com/manage-profile/security/api-tokens> | Reading and creating issues |
+| Xray API Key (client id + secret) | Jira → Apps → Xray → Global Settings → API Keys | **Test steps**, and everything else Xray owns |
+
+Xray Cloud keeps test steps outside Jira and exposes them only through its own
+API. A Test created through the Jira issue API alone is a Test **with no
+steps** — it looks like success and is not. QA-MCP refuses that rather than
+producing it: a test case with steps and no Xray API Key is an error naming the
+variables to set.
 
 ```bash
 QA_MCP_XRAY_ENABLED=true
+QA_MCP_XRAY_DEPLOYMENT=cloud
 QA_MCP_XRAY_BASE_URL=https://your-tenant.atlassian.net
 QA_MCP_XRAY_API_VERSION=3
+
+# Jira — reads and creates issues
 QA_MCP_XRAY_AUTH_MODE=basic
 QA_MCP_XRAY_EMAIL=qa-automation@your-company.com
-QA_MCP_XRAY_API_TOKEN=<token>
+QA_MCP_XRAY_API_TOKEN=<Jira API token>
+
+# Xray — test steps
+QA_MCP_XRAY_CLIENT_ID=<Xray API Key client id>
+QA_MCP_XRAY_CLIENT_SECRET=<Xray API Key client secret>
+
 QA_MCP_XRAY_PROJECT_KEY=QA
 ```
 
-Create the token at
-<https://id.atlassian.com/manage-profile/security/api-tokens>. Jira Cloud
-authenticates an API token with the account email, which is why `auth_mode` is
-`basic` rather than `token`.
+QA-MCP exchanges the API Key for a token at
+`https://xray.cloud.getxray.app/api/v2/authenticate` and reuses it — Xray
+issues it for 24 hours — then creates tests through Xray's GraphQL API so the
+steps travel with the issue.
 
-### Jira Server / Data Center
+### Jira Server / Data Center needs one
+
+Xray runs inside Jira there, under `/rest/raven`, and accepts the same
+credentials. No API Key, no second secret.
 
 ```bash
 QA_MCP_XRAY_ENABLED=true
+QA_MCP_XRAY_DEPLOYMENT=server
 QA_MCP_XRAY_BASE_URL=https://jira.internal.your-company.com
 QA_MCP_XRAY_API_VERSION=2
 QA_MCP_XRAY_AUTH_MODE=token
@@ -70,53 +121,52 @@ QA_MCP_XRAY_API_TOKEN=<personal access token>
 QA_MCP_XRAY_PROJECT_KEY=QA
 ```
 
+QA-MCP creates the issue through Jira, then posts each step to
+`/rest/raven/1.0/api/test/{key}/step`. Those are two calls, so the issue can
+exist while a step upload fails; the result reports how many steps actually
+landed rather than hiding a partial import.
+
 ### Verify
 
 ```bash
 qa-mcp --check-config
 ```
 
+Then, from your MCP client, call `xray_verify_connection`. It reports the Jira
+account **and** whether Xray's own API is reachable:
+
 ```json
 {
-  "configuration": {
-    "xray": {
-      "enabled": true, "configured": true,
-      "base_url": "https://your-tenant.atlassian.net",
-      "auth_mode": "basic", "project_key": "QA",
-      "credentials": "set"
-    }
-  },
-  "optional_tools": ["xray_verify_connection", "xray_get_test", "xray_search_tests"]
+  "connected": true,
+  "deployment": "cloud",
+  "account": { "display_name": "QA Bot" },
+  "xray_api": {
+    "reachable": false,
+    "detail": "Xray API anahtarı ayarlanmamış; test adımları aktarılamaz.",
+    "missing_settings": ["QA_MCP_XRAY_CLIENT_ID", "QA_MCP_XRAY_CLIENT_SECRET"]
+  }
 }
 ```
 
-Three read-only tools appeared. Then, from your MCP client, call
-`xray_verify_connection` — it reports which account the token belongs to.
-
-A configuration that is switched on but incomplete is rejected **at startup**,
-not on the first tool call:
+A configuration that is switched on but incomplete is rejected **at startup**:
 
 ```
 Yapılandırma hatası:
   QA_MCP_XRAY_ENABLED is true but QA_MCP_XRAY_API_TOKEN is not set.
-  Set them, or leave QA_MCP_XRAY_ENABLED unset to run QA-MCP offline.
 ```
 
 ### Custom fields
 
-Xray custom field ids differ per tenant, so they cannot ship as defaults. Read
-them from your Jira administration screen and map them by QA-MCP field name:
+Xray custom field ids differ per tenant. Read them from your Jira
+administration screen and map them by QA-MCP field name:
 
 ```bash
 QA_MCP_XRAY_CUSTOM_FIELDS={"risk_level":"customfield_10001","scenario_type":"customfield_10002"}
 ```
 
-`testcase_to_xray` then uses them without the caller having to pass anything.
 `xray_get_mapping_template` lists which QA-MCP fields are mappable.
 
----
-
-## 3. Enable writes — deliberately
+## 4. Enable writes — deliberately
 
 Read tools cannot change anything in Jira. Creating issues is separate and off
 by default:
@@ -141,7 +191,7 @@ them only in a deployment whose token is scoped to a sandbox project.
 
 ---
 
-## 4. Set your own quality bar
+## 5. Set your own quality bar
 
 The shipped standard is a starting point, not a mandate.
 
@@ -165,7 +215,7 @@ it. Setting both to contradictory values is rejected.
 
 ---
 
-## 5. Client configuration
+## 6. Client configuration
 
 ### Claude Desktop
 
@@ -229,6 +279,7 @@ The `.env` file is git-ignored. `.env.example` carries no real values.
 | `QA_MCP_LINT_MAX_STEPS` | `15` | Steps beyond which a case is flagged |
 | `QA_MCP_LINT_DISABLED_RULES` | `[]` | Rule ids to skip, as a JSON array |
 | `QA_MCP_XRAY_ENABLED` | `false` | Allow QA-MCP to contact Jira |
+| `QA_MCP_XRAY_DEPLOYMENT` | `cloud` | `cloud` or `server`; decides which Xray API is used |
 | `QA_MCP_XRAY_BASE_URL` | — | Jira base URL |
 | `QA_MCP_XRAY_API_VERSION` | `3` | `3` for Cloud, `2` for Server/DC |
 | `QA_MCP_XRAY_AUTH_MODE` | `token` | `basic` (email + token) or `token` (bearer) |
@@ -236,6 +287,9 @@ The `.env` file is git-ignored. `.env.example` carries no real values.
 | `QA_MCP_XRAY_API_TOKEN` | — | API token or PAT |
 | `QA_MCP_XRAY_PROJECT_KEY` | — | Default project key |
 | `QA_MCP_XRAY_TEST_ISSUE_TYPE` | `Test` | Issue type used for Xray tests |
+| `QA_MCP_XRAY_CLIENT_ID` | — | Xray Cloud API Key client id (Cloud only) |
+| `QA_MCP_XRAY_CLIENT_SECRET` | — | Xray Cloud API Key client secret (Cloud only) |
+| `QA_MCP_XRAY_CLOUD_BASE_URL` | `https://xray.cloud.getxray.app` | Xray Cloud API host |
 | `QA_MCP_XRAY_CUSTOM_FIELDS` | `{}` | QA-MCP field → Jira custom field id |
 | `QA_MCP_XRAY_TIMEOUT_SECONDS` | `30` | Per-request timeout |
 | `QA_MCP_XRAY_MAX_RETRIES` | `2` | Connection retries |
@@ -257,4 +311,7 @@ documented ones.
 | `HTTP 403` | The token authenticates but its owner lacks permission on the project |
 | No `xray_*` tools listed | `QA_MCP_XRAY_ENABLED` is not `true`, or the credentials failed validation — run `qa-mcp --check-config` |
 | `xray_create_test` missing | `QA_MCP_ENABLE_WRITE_TOOLS` is not `true` |
+| "adımlar aktarılamaz" when creating a test | Cloud without an Xray API Key — set `QA_MCP_XRAY_CLIENT_ID` and `QA_MCP_XRAY_CLIENT_SECRET` |
+| Test created in Jira but has no steps | `QA_MCP_XRAY_DEPLOYMENT` says `server` on a Cloud tenant, so the raven endpoints 404 — check `steps_imported` in the result |
+| Xray API Key rejected | It is created in Xray's own Global Settings, not Jira's; a Jira API token will not work |
 | Startup exits with code 2 | The configuration is contradictory; the message names the variable |
