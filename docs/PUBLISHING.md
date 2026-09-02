@@ -28,7 +28,16 @@ Without these, release workflows will fail.
 
 ### 1. Update versioned files
 
-At minimum, align the version across:
+```bash
+make bump VERSION=2.1.1
+```
+
+Use the target rather than a search-and-replace. The old version string also
+appears inside dependency pins, and a blanket replace during the 2.1.0 release
+silently turned `pydantic>=2.0.0` into `pydantic>=2.1.0`. The script edits one
+anchored line per file and fails if an anchor is missing.
+
+It covers:
 
 - `pyproject.toml`
 - `src/qa_mcp/__init__.py`

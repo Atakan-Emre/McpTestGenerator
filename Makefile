@@ -15,7 +15,7 @@ SONAR_PROJECT_KEY ?= qa-mcp
 # first so it can be archived and fed to SonarQube, then decides whether to
 # fail. `-` on the report-producing command keeps make going; the follow-up
 # command re-runs the check to set the real exit status.
-.PHONY: help venv install install-ci reports clean check-config \
+.PHONY: help venv install install-ci reports clean check-config bump \
         lint format-check typecheck test security audit build sonar ci quality
 
 help: ## Show available targets
@@ -76,6 +76,10 @@ sonar: ## Run the SonarQube scanner (needs sonar-scanner, SONAR_HOST_URL, SONAR_
 
 check-config: ## Validate the runtime configuration and show what would be exposed
 	$(BIN)/qa-mcp --check-config
+
+bump: ## Set the release version everywhere (make bump VERSION=2.1.1)
+	@test -n "$(VERSION)" || (echo "usage: make bump VERSION=x.y.z" && exit 1)
+	$(PYTHON) scripts/bump_version.py $(VERSION)
 
 quality: lint format-check typecheck ## All static analysis
 

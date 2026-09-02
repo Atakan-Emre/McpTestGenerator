@@ -394,3 +394,43 @@ class TestReadmeAccuracy:
         text = self._text()
         assert "Done in v2" in text
         assert "Phase 3 (Planned)" not in text
+
+
+class TestDependencyPins:
+    """Guard the dependency floors against accidental version tracking."""
+
+    @staticmethod
+    def _dependencies() -> list[str]:
+        pyproject = PYPROJECT.read_text(encoding="utf-8")
+        block = re.search(r"^dependencies = \[(.*?)\]", pyproject, re.S | re.M)
+        assert block, "pyproject declares no dependencies"
+        return re.findall(r'"([^"]+)"', block.group(1))
+
+    def test_no_dependency_floor_tracks_our_own_version(self):
+        """Regression: a blanket search-and-replace during a release bump turned
+        `pydantic>=2.0.0` into `pydantic>=2.1.0`, tightening a pin nobody chose.
+
+        A dependency bound that happens to equal this package's version is
+        almost always that accident. Use `make bump`, which edits anchored
+        version lines only. If a pin genuinely needs this value, update this
+        test deliberately.
+        """
+        import qa_mcp
+
+        version = qa_mcp.__version__
+        offenders = [d for d in self._dependencies() if version in d]
+
+        assert not offenders, (
+            f"dependency pin(s) carrying the package version {version}: {offenders}"
+        )
+
+    def test_the_mcp_floor_is_not_raised_by_a_release(self):
+        """The SDK floor moves when the SDK requires it, not when we release."""
+        mcp_pins = [d for d in self._dependencies() if d.startswith("mcp")]
+        assert mcp_pins, "the mcp dependency disappeared"
+        assert "<3.0.0" in mcp_pins[0], mcp_pins
+
+    def test_release_runbook_points_at_the_bump_script(self):
+        runbook = (REPO_ROOT / "docs/PUBLISHING.md").read_text(encoding="utf-8")
+        assert "make bump" in runbook
+        assert (REPO_ROOT / "scripts/bump_version.py").is_file()

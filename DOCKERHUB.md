@@ -67,7 +67,7 @@ docker run --rm -i atakanemree/qa-mcp:latest
 | Tag | Meaning |
 |-----|---------|
 | `latest` | Most recent stable image |
-| `2.1.0` | Current stable release |
+| `2.1.1` | Current stable release |
 | `1.0` | Major/minor convenience tag |
 | `1` | Major convenience tag |
 

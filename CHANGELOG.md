@@ -9,6 +9,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.1.1] - 2026-09-02
+
+Both fixes came out of driving the server, over stdio, against a contract
+simulator that speaks real HTTP and returns 404 for any path it does not
+implement. The unit tests missed both.
+
+### Fixed
+- **Test steps were still lost on part of the Xray Server/DC estate.** Xray's
+  own OpenAPI spec for REST 2.0 documents the step collection as
+  `/test/{key}/steps`, while its reference pages show `/test/{key}/step`, and
+  both spellings are live. The client used the singular form, so an instance
+  serving the plural one imported zero steps and reported only a warning. The
+  first step now tries the spelling the configured API version documents and
+  falls back to the other on a 404, then reuses whichever answered; a non-404
+  failure is not retried, since that endpoint exists and genuinely failed
+- **The Xray Cloud token was re-fetched on every tool call.** Each call builds
+  its own client, so caching the token on the instance meant authenticating
+  again every time, despite Xray issuing it for 24 hours. The cache is now
+  process-wide and guarded by a lock
+- The raven base path follows `QA_MCP_XRAY_API_VERSION` instead of being pinned
+  to `1.0`
+- **Dependency pins tightened by accident in 2.1.0.** The release bump was a
+  blanket search-and-replace of the old version string, which also appears
+  inside dependency specifiers, so `pydantic>=2.0.0` and
+  `pydantic-settings>=2.0.0` silently became `>=2.1.0`. Restored, and the bump
+  is now `scripts/bump_version.py` (`make bump VERSION=…`), which edits one
+  anchored line per file and fails if an anchor is missing. A test rejects any
+  dependency pin carrying the package's own version
+
+### Changed
+- `api_used` now names the endpoint that worked, e.g.
+  `jira-rest+xray-raven/steps`, so which spelling a tenant serves is visible in
+  the result rather than having to be inferred
+
+---
+
 ## [2.1.0] - 2026-09-02
 
 ### Fixed

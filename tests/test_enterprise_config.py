@@ -26,6 +26,16 @@ TENANT = {
 
 
 @pytest.fixture(autouse=True)
+def fresh_token_cache():
+    """The Xray Cloud token cache is process-wide; do not inherit it."""
+    from qa_mcp.integrations.xray import reset_token_cache
+
+    reset_token_cache()
+    yield
+    reset_token_cache()
+
+
+@pytest.fixture(autouse=True)
 def fresh_settings():
     """Read the environment per test.
 
@@ -600,8 +610,13 @@ class TestXrayCloudApi:
         }
         assert seen["graphql_auth"] == "Bearer JWT-TOKEN"
 
-    def test_the_token_is_reused_across_calls(self, cloud_env):
-        """The token is valid for 24 hours; re-authenticating per call is waste."""
+    def test_the_token_is_reused_across_separate_clients(self, cloud_env):
+        """Regression: every tool call builds its own client.
+
+        Caching the token on the instance meant re-authenticating on each call.
+        A live run against a contract simulator showed two /authenticate hits
+        for one create; the unit test missed it by reusing a single client.
+        """
         calls = {"auth": 0}
 
         def handler(request: httpx.Request) -> httpx.Response:
@@ -622,9 +637,9 @@ class TestXrayCloudApi:
                 )
             return _ok_handler(request)
 
-        with XrayClient(Settings(), transport=_mock_transport(handler)) as client:
-            client.create_test(PAYLOAD_WITH_STEPS)
-            client.create_test(PAYLOAD_WITH_STEPS)
+        for _ in range(3):
+            with XrayClient(Settings(), transport=_mock_transport(handler)) as client:
+                client.create_test(PAYLOAD_WITH_STEPS)
 
         assert calls["auth"] == 1
 
@@ -705,9 +720,12 @@ class TestXrayServerApi:
         with XrayClient(Settings(), transport=_mock_transport(handler)) as client:
             result = client.create_test(PAYLOAD_WITH_STEPS)
 
-        assert result["api_used"] == "jira-rest+xray-raven"
         assert result["steps_imported"] == 2
-        assert sum("/rest/raven/1.0/api/test/QA-42/step" in p for p in paths) == 2
+        assert result["api_used"].startswith("jira-rest+xray-raven/")
+        # The base follows the configured API version; the collection spelling
+        # is discovered (see TestStepEndpointDiscovery).
+        raven = [p for p in paths if "/rest/raven/" in p]
+        assert raven and all(p.startswith("/rest/raven/2.0/api/test/QA-42/step") for p in raven)
 
     def test_a_failed_step_upload_is_reported_not_hidden(self, server_env):
         """The issue exists but is incomplete; saying nothing would be worse."""
@@ -765,3 +783,76 @@ class TestConnectionReportsXrayReachability:
 
         assert status["xray_api"]["reachable"] is True
         assert status["deployment"] == "server"
+
+
+class TestStepEndpointDiscovery:
+    """Xray Server/DC serves the step collection under two different spellings.
+
+    Its own OpenAPI spec for REST 2.0 documents `/steps`; its reference pages
+    show `/step`. Picking one is wrong on half the instances, so the client
+    probes and remembers. A live run against a simulator serving `/steps`
+    imported zero steps before this existed.
+    """
+
+    @pytest.fixture
+    def server_env(self, monkeypatch):
+        for key, value in SERVER_TENANT.items():
+            monkeypatch.setenv(key, value)
+        monkeypatch.setenv("QA_MCP_ENABLE_WRITE_TOOLS", "true")
+
+    def _handler(self, served: str, paths: list[str]):
+        def handler(request: httpx.Request) -> httpx.Response:
+            path = request.url.path
+            if "/rest/raven/" in path:
+                paths.append(path)
+                return httpx.Response(200 if path.endswith(f"/{served}") else 404, json={})
+            return _ok_handler(request)
+
+        return handler
+
+    def test_it_finds_the_plural_spelling(self, server_env):
+        paths: list[str] = []
+        with XrayClient(Settings(), transport=_mock_transport(self._handler("steps", paths))) as c:
+            result = c.create_test(PAYLOAD_WITH_STEPS)
+
+        assert result["steps_imported"] == 2
+        assert result["api_used"].endswith("/steps")
+
+    def test_it_falls_back_to_the_singular_spelling(self, server_env):
+        paths: list[str] = []
+        with XrayClient(Settings(), transport=_mock_transport(self._handler("step", paths))) as c:
+            result = c.create_test(PAYLOAD_WITH_STEPS)
+
+        assert result["steps_imported"] == 2
+        assert result["api_used"].endswith("/step")
+
+    def test_the_discovered_spelling_is_reused(self, server_env):
+        """Probe once, not once per step."""
+        paths: list[str] = []
+        with XrayClient(Settings(), transport=_mock_transport(self._handler("step", paths))) as c:
+            c.create_test(PAYLOAD_WITH_STEPS)
+
+        assert sum(p.endswith("/steps") for p in paths) == 1
+
+    def test_a_non_404_failure_is_not_retried_as_a_spelling_problem(self, server_env):
+        """A 500 means the endpoint exists and broke; trying the other spelling hides that."""
+        seen: list[str] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            if "/rest/raven/" in request.url.path:
+                seen.append(request.url.path)
+                return httpx.Response(500, text="boom")
+            return _ok_handler(request)
+
+        with XrayClient(Settings(), transport=_mock_transport(handler)) as c:
+            result = c.create_test(PAYLOAD_WITH_STEPS)
+
+        assert result["steps_imported"] == 0
+        assert len(seen) == 1
+
+    def test_the_raven_base_follows_the_configured_api_version(self, server_env):
+        paths: list[str] = []
+        with XrayClient(Settings(), transport=_mock_transport(self._handler("steps", paths))) as c:
+            c.create_test(PAYLOAD_WITH_STEPS)
+
+        assert all(p.startswith("/rest/raven/2.0/api/") for p in paths)

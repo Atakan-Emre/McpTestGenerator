@@ -33,6 +33,7 @@ steps. That is the trap this module exists to avoid.
 from __future__ import annotations
 
 import base64
+import threading
 from datetime import datetime, timedelta
 from types import TracebackType
 from typing import Any
@@ -74,9 +75,23 @@ class XrayError(RuntimeError):
         }
 
 
-# Xray Server/Data Center serves test steps from its 1.0 endpoints, which
-# remain available under the 2.0 API.
-XRAY_SERVER_API_VERSION = "1.0"
+# Xray renamed the step collection between REST versions and the two spellings
+# are both live in the wild, so the client tries the one its configured version
+# documents and falls back to the other rather than guessing.
+XRAY_STEP_PATHS = {"2": ("steps", "step"), "1": ("step", "steps")}
+
+# Xray Cloud issues a token per API Key, valid for 24 hours. Every tool call
+# builds its own client, so caching on the instance re-authenticates on each
+# call; the cache belongs to the process.
+_TOKEN_CACHE: dict[str, tuple[str, datetime]] = {}
+_TOKEN_LOCK = threading.Lock()
+
+
+def reset_token_cache() -> None:
+    """Forget any cached Xray Cloud token. Used by the tests."""
+    with _TOKEN_LOCK:
+        _TOKEN_CACHE.clear()
+
 
 # Status codes worth explaining rather than echoing.
 _STATUS_HINTS = {
@@ -120,8 +135,6 @@ class XrayClient:
 
         self._transport = transport
         self._cloud_client: httpx.Client | None = None
-        self._cloud_token: str | None = None
-        self._cloud_token_expires: datetime | None = None
 
         self._client = httpx.Client(
             base_url=f"{xray.base_url}/rest/api/{xray.api_version}",
@@ -246,13 +259,10 @@ class XrayClient:
     def _cloud_authorization(self) -> str:
         """Exchange the Xray API Key for a bearer token, reusing it until it ages out.
 
-        The token Xray issues is valid for 24 hours; it is cached for slightly
-        less so a long-running server never presents an expired one.
+        Xray issues the token for 24 hours. The cache is process-wide because a
+        client is built per tool call: keeping it on the instance would
+        re-authenticate on every single call.
         """
-        now = datetime.now()
-        if self._cloud_token and self._cloud_token_expires and now < self._cloud_token_expires:
-            return self._cloud_token
-
         xray = self.settings.xray
         if not (xray.client_id and xray.client_secret):
             raise XrayError(
@@ -260,6 +270,13 @@ class XrayClient:
                 "bir anahtar oluşturup QA_MCP_XRAY_CLIENT_ID ve QA_MCP_XRAY_CLIENT_SECRET "
                 "değerlerini ayarlayın. Bu, Jira API token'ından farklı bir kimliktir."
             )
+
+        cache_key = f"{xray.cloud_base_url}|{xray.client_id}"
+        now = datetime.now()
+        with _TOKEN_LOCK:
+            cached = _TOKEN_CACHE.get(cache_key)
+            if cached and now < cached[1]:
+                return cached[0]
 
         response = self._cloud().post(
             "/api/v2/authenticate",
@@ -288,8 +305,8 @@ class XrayClient:
                 body_excerpt=response.text[:200],
             )
 
-        self._cloud_token = token
-        self._cloud_token_expires = now + timedelta(hours=23)
+        with _TOKEN_LOCK:
+            _TOKEN_CACHE[cache_key] = (token, now + timedelta(hours=23))
         return token
 
     def _graphql(self, query: str, variables: dict[str, Any]) -> dict[str, Any]:
@@ -527,18 +544,11 @@ class XrayClient:
 
         imported = 0
         warnings: list[str] = []
+        step_path: str | None = None
         if steps and key:
             for index, step in enumerate(steps, 1):
                 try:
-                    self._raven_request(
-                        "POST",
-                        f"/api/test/{key}/step",
-                        json={
-                            "step": step["action"],
-                            "data": step["data"],
-                            "result": step["result"],
-                        },
-                    )
+                    step_path = self._post_step(key, step, step_path)
                     imported += 1
                 except XrayError as exc:
                     warnings.append(f"Adım {index} aktarılamadı: {exc}")
@@ -550,15 +560,52 @@ class XrayClient:
                 "Test'i Jira'da kontrol edin."
             )
 
+        api_used = "jira-rest"
+        if steps:
+            api_used = f"jira-rest+xray-raven/{step_path}" if step_path else "jira-rest+xray-raven"
+
         return {
             "created": True,
             "issue_key": key,
             "issue_id": created.get("id"),
             "url": f"{self.settings.xray.base_url}/browse/{key}" if key else None,
             "steps_imported": imported,
-            "api_used": "jira-rest+xray-raven" if steps else "jira-rest",
+            "api_used": api_used,
             "warnings": warnings,
         }
+
+    def _post_step(self, key: str, step: dict[str, str], known_path: str | None) -> str:
+        """Post one step, discovering which spelling this Xray serves.
+
+        Xray's own OpenAPI spec for REST 2.0 documents `/steps` while its
+        reference pages show `/step`, and instances differ. Rather than pick one
+        and be wrong half the time, the first step tries the spelling the
+        configured version documents and falls back to the other on a 404. The
+        winner is reused for the remaining steps.
+        """
+        if known_path:
+            self._raven_step_request(key, step, known_path)
+            return known_path
+
+        version = self.settings.xray.api_version
+        preferred, fallback = XRAY_STEP_PATHS.get(version, ("step", "steps"))
+        try:
+            self._raven_step_request(key, step, preferred)
+            return preferred
+        except XrayError as exc:
+            if exc.status_code != 404:
+                raise
+        self._raven_step_request(key, step, fallback)
+        return fallback
+
+    def _raven_step_request(
+        self, key: str, step: dict[str, str], collection: str
+    ) -> dict[str, Any]:
+        return self._raven_request(
+            "POST",
+            f"/api/test/{key}/{collection}",
+            json={"step": step["action"], "data": step["data"], "result": step["result"]},
+        )
 
     def _raven_request(self, method: str, path: str, **kwargs: Any) -> dict[str, Any]:
         """Call Xray's Server/Data Center REST API.
@@ -566,7 +613,8 @@ class XrayClient:
         It lives on the Jira host under /rest/raven and accepts the same
         credentials, so only the base path differs.
         """
-        base = f"{self.settings.xray.base_url}/rest/raven/{XRAY_SERVER_API_VERSION}"
+        version = "2.0" if self.settings.xray.api_version == "2" else "1.0"
+        base = f"{self.settings.xray.base_url}/rest/raven/{version}"
         try:
             response = self._client.request(method, f"{base}{path}", **kwargs)
         except httpx.HTTPError as exc:
