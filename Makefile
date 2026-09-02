@@ -8,11 +8,14 @@ VENV         ?= .venv
 BIN          := $(VENV)/bin
 REPORTS      := reports
 
+# Overridable so an organisation can namespace the project in its own SonarQube.
+SONAR_PROJECT_KEY ?= qa-mcp
+
 # Analysis targets exit non-zero on findings. CI needs the report file written
 # first so it can be archived and fed to SonarQube, then decides whether to
 # fail. `-` on the report-producing command keeps make going; the follow-up
 # command re-runs the check to set the real exit status.
-.PHONY: help venv install install-ci reports clean \
+.PHONY: help venv install install-ci reports clean check-config \
         lint format-check typecheck test security audit build sonar ci quality
 
 help: ## Show available targets
@@ -64,8 +67,15 @@ audit: reports ## Check installed dependencies for known vulnerabilities
 build: ## Build the sdist and wheel
 	$(BIN)/python -m build
 
-sonar: ## Run the SonarQube scanner (requires sonar-scanner on PATH)
-	sonar-scanner -Dsonar.projectVersion=$$($(BIN)/python -c "import qa_mcp; print(qa_mcp.__version__)")
+sonar: ## Run the SonarQube scanner (needs sonar-scanner, SONAR_HOST_URL, SONAR_TOKEN)
+	@test -n "$$SONAR_HOST_URL" || (echo "SONAR_HOST_URL is not set" && exit 1)
+	@test -n "$$SONAR_TOKEN" || (echo "SONAR_TOKEN is not set" && exit 1)
+	sonar-scanner \
+		-Dsonar.projectKey=$(SONAR_PROJECT_KEY) \
+		-Dsonar.projectVersion=$$($(BIN)/python -c "import qa_mcp; print(qa_mcp.__version__)")
+
+check-config: ## Validate the runtime configuration and show what would be exposed
+	$(BIN)/qa-mcp --check-config
 
 quality: lint format-check typecheck ## All static analysis
 

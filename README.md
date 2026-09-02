@@ -32,7 +32,8 @@ Say goodbye to inconsistent manual QA documents. QA-MCP ensures that whether you
 - **🔗 Xray Ready:** Instantly convert standardized test cases into Xray-compatible JSON payloads for Jira integration.
 - **📦 Suite Composition:** Dynamically compose and manage Smoke, Sanity, Regression, E2E, Integration, and Performance test suites.
 - **📊 Coverage Reporting:** Track and report coverage metrics across requirements, modules, and risk areas.
-- **🧩 Modern MCP Surface:** Implements protocol revision `2025-11-25` — typed `structuredContent` results with published output schemas, read-only tool annotations, display titles, resource templates, and argument completion.
+- **🧩 Modern MCP Surface:** Built on the **mcp 2.x** SDK — typed `structuredContent` results whose schemas are derived from the result models, read-only tool annotations, display titles, resource templates, and argument completion.
+- **🏢 Enterprise Ready:** Point it at your own Jira/Xray tenant with environment variables alone. Credentials are validated at startup, never logged, and write access is a separate, explicit opt-in. See [ENTERPRISE-SETUP.md](docs/ENTERPRISE-SETUP.md).
 
 ## 🚀 Quick Start
 
@@ -161,7 +162,8 @@ For deep dives into QA-MCP's architecture and contribution guidelines, explore t
   - **[CONTRIBUTING.md](CONTRIBUTING.md):** Contributor workflow and quality checks.
   - **[CHANGELOG.md](CHANGELOG.md):** Release history.
   - **[docs/CI-CD.md](docs/CI-CD.md):** Jenkins pipeline and SonarQube analysis setup.
-  - **[docs/MCP-2.x-MIGRATION.md](docs/MCP-2.x-MIGRATION.md):** Verified plan for moving to the mcp 2.x SDK.
+  - **[docs/ENTERPRISE-SETUP.md](docs/ENTERPRISE-SETUP.md):** Connecting your own Jira/Xray tenant and quality bar.
+  - **[docs/MCP-2.x-MIGRATION.md](docs/MCP-2.x-MIGRATION.md):** Record of the mcp 2.x SDK migration.
   - **[docs/PUBLISHING.md](docs/PUBLISHING.md):** Package and release publishing flow.
 
 ## 🗺️ Roadmap
@@ -192,7 +194,8 @@ Tutarsız ve manuel hazırlanan QA dokümanlarına veda edin. QA-MCP; ham özell
   - **🔗 Xray Entegrasyonuna Hazır:** Standart test case'leri anında Jira/Xray uyumlu JSON payload'larına dönüştürün.
   - **📦 Suite Yönetimi:** Smoke, Sanity, Regression, E2E, Integration ve Performance suitlerini dinamik olarak oluşturun ve yönetin.
   - **📊 Kapsam (Coverage) Raporlama:** Gereksinim, modül ve risk bazlı test kapsam metriklerini raporlayın.
-  - **🧩 Güncel MCP Yüzeyi:** `2025-11-25` protokol revizyonunu uygular — yayınlanmış çıktı şemalarıyla tipli `structuredContent`, read-only tool annotation'ları, görünen adlar, resource template ve argüman tamamlama.
+  - **🧩 Güncel MCP Yüzeyi:** **mcp 2.x** SDK üzerine kuruludur — şemaları sonuç modellerinden türetilen tipli `structuredContent`, read-only tool annotation'ları, görünen adlar, resource template ve argüman tamamlama.
+  - **🏢 Kurumsal Kullanıma Hazır:** Yalnızca ortam değişkenleriyle kendi Jira/Xray tenant'ınıza bağlanır. Kimlik bilgileri başlangıçta doğrulanır, hiçbir yere loglanmaz; yazma erişimi ayrı ve bilinçli bir tercihtir. Bkz. [ENTERPRISE-SETUP.md](docs/ENTERPRISE-SETUP.md).
 
 ## 🚀 Hızlı Başlangıç
 
@@ -322,7 +325,8 @@ Mimari detaylar ve projeye katkı rehberleri için:
   - **[CONTRIBUTING.md](CONTRIBUTING.md):** Katkı akışı ve kalite kontrolleri.
   - **[CHANGELOG.md](CHANGELOG.md):** Sürüm ve değişiklik geçmişi.
   - **[docs/CI-CD.md](docs/CI-CD.md):** Jenkins pipeline ve SonarQube analiz kurulumu.
-  - **[docs/MCP-2.x-MIGRATION.md](docs/MCP-2.x-MIGRATION.md):** mcp 2.x SDK'ya geçiş için doğrulanmış plan.
+  - **[docs/ENTERPRISE-SETUP.md](docs/ENTERPRISE-SETUP.md):** Kendi Jira/Xray tenant'ınızı ve kalite eşiğinizi bağlama.
+  - **[docs/MCP-2.x-MIGRATION.md](docs/MCP-2.x-MIGRATION.md):** mcp 2.x SDK geçişinin kaydı.
   - **[docs/PUBLISHING.md](docs/PUBLISHING.md):** Paket ve release yayın süreci.
 
 ## 🗺️ Yol Haritası

@@ -4,7 +4,6 @@ import re
 
 import pytest
 
-from qa_mcp.server import call_tool, list_tools
 from qa_mcp.tools.compose import compose_suite, coverage_report
 from qa_mcp.tools.generate import generate_testcase
 from qa_mcp.tools.lint import lint_batch, lint_testcase
@@ -435,33 +434,26 @@ class TestComposeTool:
 
 
 class TestMcpServerToolNames:
-    """Test public MCP tool naming compatibility."""
+    """Published tool naming compatibility."""
 
-    @pytest.mark.asyncio
-    async def test_list_tools_are_claude_desktop_safe(self):
-        """Published tool names should match Claude Desktop's validation regex."""
-        tools = await list_tools()
+    async def test_tool_names_are_claude_desktop_safe(self):
+        """Claude Desktop rejects a tool list containing dotted names."""
+        from qa_mcp.server import mcp
+
         pattern = re.compile(r"^[a-zA-Z0-9_-]{1,64}$")
+        tools = await mcp.list_tools()
 
         assert tools
         assert all(pattern.fullmatch(tool.name) for tool in tools)
-        assert all("." not in tool.name for tool in tools)
         assert "testcase_generate" in {tool.name for tool in tools}
 
-    @pytest.mark.asyncio
-    async def test_call_tool_accepts_legacy_dotted_aliases(self):
-        """Legacy dotted names should continue to work for older clients."""
-        result = await call_tool(
-            "testcase.generate",
-            {
-                "feature": "User Login",
-                "acceptance_criteria": ["User can login with valid credentials"],
-            },
-        )
+    async def test_legacy_dotted_aliases_are_off_by_default(self):
+        """They were kept for older clients but double the tool list, so a
+        deployment opts in with QA_MCP_LEGACY_TOOL_ALIASES."""
+        from qa_mcp.server import mcp
 
-        assert isinstance(result, dict)
-        assert "testcases" in result
-        assert result["total_generated"] >= 1
+        names = {tool.name for tool in await mcp.list_tools()}
+        assert not any("." in name for name in names)
 
 
 class TestXrayFieldFidelity:

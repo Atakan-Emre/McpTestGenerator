@@ -6,6 +6,7 @@ Analyzes test cases for quality issues and provides improvement suggestions.
 
 from typing import Any, TypedDict
 
+from qa_mcp.config import Settings, get_settings
 from qa_mcp.core.lint import LintEngine
 from qa_mcp.core.models import LintResult, TestCase, TestCaseDraft
 from qa_mcp.core.standards import TestCaseStandard
@@ -16,10 +17,26 @@ class CommonIssue(TypedDict):
     count: int
 
 
+def build_standard(settings: Settings | None = None, strict_mode: bool = False) -> TestCaseStandard:
+    """Build the lint standard an organisation has configured.
+
+    Thresholds come from the environment so a team can hold itself to a higher
+    bar than the shipped default without forking the package.
+    """
+    settings = settings or get_settings()
+    standard = TestCaseStandard.get_default()
+    standard.minimum_score = (
+        settings.lint.strict_minimum_score if strict_mode else settings.lint.minimum_score
+    )
+    standard.quality_rules["steps"]["max_steps"] = settings.lint.max_steps
+    return standard
+
+
 def lint_testcase(
     testcase: dict,
     include_improvement_plan: bool = True,
     strict_mode: bool = False,
+    settings: Settings | None = None,
 ) -> dict:
     """
     Lint a test case and return quality analysis.
@@ -27,7 +44,8 @@ def lint_testcase(
     Args:
         testcase: Test case dictionary to analyze
         include_improvement_plan: Whether to include prioritized improvement plan
-        strict_mode: If True, applies stricter validation rules
+        strict_mode: If True, applies the configured strict threshold
+        settings: Runtime configuration; the process settings if omitted
 
     Returns:
         Dictionary containing:
@@ -38,12 +56,10 @@ def lint_testcase(
         - suggestions: General improvement suggestions
         - improvement_plan: Prioritized actions (if requested)
     """
-    # Initialize engine
-    standard = TestCaseStandard.get_default()
-    if strict_mode:
-        standard.minimum_score = 75  # Higher threshold in strict mode
-
-    engine = LintEngine(standard)
+    # Initialize engine from the configured standard
+    settings = settings or get_settings()
+    standard = build_standard(settings, strict_mode)
+    engine = LintEngine(standard, disabled_rules=settings.lint.disabled_rules)
 
     # Parse into the permissive draft model. A test case that violates the
     # standard is precisely what lint exists to report on, so it must not be
@@ -121,6 +137,7 @@ def lint_batch(
     testcases: list[dict],
     include_improvement_plan: bool = False,
     strict_mode: bool = False,
+    settings: Settings | None = None,
 ) -> dict:
     """
     Lint multiple test cases and provide aggregate analysis.
@@ -142,7 +159,7 @@ def lint_batch(
     all_issues: list[dict[str, Any]] = []
 
     for idx, tc in enumerate(testcases):
-        result = lint_testcase(tc, include_improvement_plan, strict_mode)
+        result = lint_testcase(tc, include_improvement_plan, strict_mode, settings)
         result["index"] = idx
         result["testcase_id"] = tc.get("id", f"TC-{idx + 1}")
         results.append(result)

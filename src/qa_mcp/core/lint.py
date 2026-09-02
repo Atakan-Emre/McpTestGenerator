@@ -5,6 +5,8 @@ Analyzes test cases against standards and provides quality scores and suggestion
 """
 
 import re
+from collections.abc import Iterable
+from functools import cache
 
 from qa_mcp.core.models import (
     LintIssue,
@@ -14,6 +16,18 @@ from qa_mcp.core.models import (
     TestCaseDraft,
 )
 from qa_mcp.core.standards import TestCaseStandard
+from qa_mcp.resources.standards import get_lint_rules
+
+
+@cache
+def _rule_penalties() -> dict[str, int]:
+    """Penalty per rule id, read from the published lint-rules resource.
+
+    Refunding a disabled rule needs to know what it cost. Taking the figure
+    from the same resource clients read keeps the documentation and the
+    arithmetic from disagreeing.
+    """
+    return {rule["id"]: int(rule.get("penalty", 0)) for rule in get_lint_rules()["rules"]}
 
 
 class LintEngine:
@@ -26,9 +40,20 @@ class LintEngine:
     - Suggestions for improvement
     """
 
-    def __init__(self, standard: TestCaseStandard | None = None):
-        """Initialize with a standard (uses default if not provided)."""
+    def __init__(
+        self,
+        standard: TestCaseStandard | None = None,
+        disabled_rules: Iterable[str] | None = None,
+    ):
+        """Initialize with a standard and an optional set of rules to skip.
+
+        Args:
+            standard: Thresholds to lint against; the shipped default if omitted.
+            disabled_rules: Rule ids an organisation has chosen not to enforce.
+                A disabled rule raises no issue and costs no points.
+        """
         self.standard = standard or TestCaseStandard.get_default()
+        self.disabled_rules = frozenset(disabled_rules or ())
 
     def lint(self, testcase: TestCaseDraft) -> LintResult:
         """
@@ -44,6 +69,10 @@ class LintEngine:
         suggestions: list[str] = []
         score = 100  # Start with perfect score, deduct for issues
 
+        # Checks append freely; disabled rules are withdrawn afterwards, along
+        # with the points they cost, so a team that switches a rule off is not
+        # still penalised by it.
+
         # Run all lint checks
         score, issues, suggestions = self._check_title(testcase, score, issues, suggestions)
         score, issues, suggestions = self._check_description(testcase, score, issues, suggestions)
@@ -58,6 +87,15 @@ class LintEngine:
             testcase, score, issues, suggestions
         )
         score, issues, suggestions = self._check_traceability(testcase, score, issues, suggestions)
+
+        if self.disabled_rules:
+            penalties = _rule_penalties()
+            score += sum(
+                penalties.get(issue.rule, 0)
+                for issue in issues
+                if issue.rule in self.disabled_rules
+            )
+            issues = [i for i in issues if i.rule not in self.disabled_rules]
 
         # Ensure score is within bounds
         score = max(0, min(100, score))
@@ -235,13 +273,14 @@ class LintEngine:
             return score, issues, suggestions
 
         # Check number of steps
-        if len(tc.steps) > 15:
+        max_steps = int(self.standard.quality_rules.get("steps", {}).get("max_steps", 15))
+        if len(tc.steps) > max_steps:
             issues.append(
                 LintIssue(
                     severity=LintSeverity.WARNING,
                     field="steps",
                     rule="steps.max_count",
-                    message=f"Çok fazla adım ({len(tc.steps)}). Maksimum önerilen: 15",
+                    message=f"Çok fazla adım ({len(tc.steps)}). Maksimum önerilen: {max_steps}",
                     suggestion="Test case'i daha küçük, odaklı test'lere ayırmayı düşünün",
                 )
             )

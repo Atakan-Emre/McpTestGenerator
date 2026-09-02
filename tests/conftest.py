@@ -1,5 +1,9 @@
 """Pytest configuration and fixtures."""
 
+import asyncio
+import contextlib
+from contextlib import asynccontextmanager
+
 import pytest
 
 
@@ -83,3 +87,45 @@ def sample_testcases_batch():
         }
         for i in range(1, 6)
     ]
+
+
+@asynccontextmanager
+async def mcp_session():
+    """A real MCP client session talking to the server over in-memory streams.
+
+    Calling ``mcp.call_tool`` directly raises on failure; the conversion into a
+    result carrying ``is_error`` happens in the request handler above it. Only a
+    genuine session exercises the contract clients actually see - including the
+    audit interceptor, which sits in the same layer.
+
+    Deliberately a context manager rather than a fixture: anyio refuses to exit
+    a cancel scope in a different task than it was entered in, and pytest-asyncio
+    may finalize a yielding fixture from another task. Used inside the test body,
+    setup and teardown stay on one task.
+    """
+    from mcp import ClientSession
+    from mcp.shared.memory import create_client_server_memory_streams
+
+    from qa_mcp.server import mcp
+
+    async with create_client_server_memory_streams() as (client_streams, server_streams):
+        client_read, client_write = client_streams
+        server_read, server_write = server_streams
+
+        server = mcp._lowlevel_server
+        task = asyncio.create_task(
+            server.run(
+                server_read,
+                server_write,
+                server.create_initialization_options(),
+                raise_exceptions=False,
+            )
+        )
+        try:
+            async with ClientSession(client_read, client_write) as session:
+                await session.initialize()
+                yield session
+        finally:
+            task.cancel()
+            with contextlib.suppress(BaseException):
+                await task

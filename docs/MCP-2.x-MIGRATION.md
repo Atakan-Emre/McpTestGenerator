@@ -1,10 +1,21 @@
 # Migrating QA-MCP to the mcp 2.x SDK
 
-Status: **planned**. QA-MCP 1.1.0 pins `mcp>=1.9.0,<2.0.0`.
+Status: **done in 2.0.0**. QA-MCP now pins `mcp>=2.1.0,<3.0.0`.
 
-Everything below was verified by running mcp `2.1.1` against QA-MCP's own tool
-functions in a throwaway environment, not read from release notes. Where a
-finding contradicts an assumption you might reasonably make, it is called out.
+This is kept as the record of what changed and why, for anyone reading the
+2.0.0 diff or migrating their own server. Everything below was verified by
+running mcp `2.1.1` against QA-MCP's own tool functions, not read from release
+notes. Where a finding contradicts an assumption you might reasonably make, it
+is called out.
+
+Two things the migration turned up that the plan did not anticipate:
+
+* **Extension identifiers need a reverse-DNS prefix** (SEP-2133), so the audit
+  interceptor is `com.atakanemre.qa-mcp/audit`, not `qa-mcp.audit`.
+* **A raising tool does not reach an interceptor as an exception.** The runtime
+  converts it into a result carrying `is_error` *below* `intercept_tool_call`,
+  so an audit hook that only catches exceptions records a failure as a success.
+  Read the flag on the returned result instead.
 
 ---
 
@@ -181,7 +192,7 @@ imports. None of it changes.
 
 ---
 
-## Plan
+## How it was done
 
 1. **Result models.** Replace `core/schemas.py` with Pydantic models. Keep the
    existing `tests/test_mcp_protocol.py::TestStructuredContent` assertions
@@ -199,10 +210,10 @@ imports. None of it changes.
 7. **Decide on the legacy dotted aliases** — keep or drop, and say which in the
    changelog.
 
-Steps 1 and 2–5 are separable: step 1 is a refactor that ships on mcp 1.x and
-reduces the 2.x change to mechanical work.
+Steps 1 and 2-5 were separable in practice: the result models landed while
+still on mcp 1.x, which reduced the SDK swap itself to mechanical work.
 
-## Definition of done
+## Definition of done — met
 
 - `make ci` green on mcp 2.x
 - Nine tools published with a non-empty `output_schema` (`properties` populated),

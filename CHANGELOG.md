@@ -9,6 +9,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.0.0] - 2026-09-02
+
+Migrates to the mcp 2.x SDK and makes QA-MCP configurable for an organisation
+that wants to point it at its own Jira/Xray tenant and its own quality bar.
+
+### Breaking
+- **Requires the mcp 2.x SDK** (`mcp>=2.1.0,<3.0.0`). The server is rebuilt on
+  `MCPServer`; the 1.x decorator API it used no longer exists
+- Result attribute names follow the SDK's move to snake_case
+  (`input_schema`, `output_schema`, `is_error`, `structured_content`). The wire
+  format is unchanged, so MCP clients are unaffected; code driving the server
+  as a library is not
+- The pre-1.0.3 dotted tool aliases (`testcase.lint`, ...) are no longer
+  published by default. Set `QA_MCP_LEGACY_TOOL_ALIASES=true` to restore them
+- Environment variables are namespaced: `QA_MCP_LOG_LEVEL`,
+  `QA_MCP_AUDIT_LOG_ENABLED`, `QA_MCP_ENABLE_WRITE_TOOLS`. The unprefixed 1.x
+  spellings are still accepted so existing deployments keep working
+- `ENABLE_WRITE_TOOLS` is no longer inert: it publishes a tool that writes to
+  Jira and is rejected at startup unless a tenant is configured
+
+### Added
+
+#### Enterprise configuration
+- `qa_mcp.config`: typed, environment-driven settings for the server, the
+  quality gate and the Jira/Xray tenant. A contradictory configuration is
+  rejected at startup with a message naming the variable, rather than failing
+  on the first tool call
+- `qa-mcp --check-config` validates the configuration, reports what the
+  deployment would expose, and exits non-zero when it is wrong
+- Credentials are held as `SecretStr`: absent from `repr()`, from
+  `--check-config` output and from error details
+
+#### Jira/Xray integration
+- `xray_verify_connection`, `xray_get_test`, `xray_search_tests` — read-only,
+  published only once a tenant is configured
+- `xray_create_test` — published only when writes are explicitly enabled, and
+  re-checked inside the client so a registration mistake cannot reach a write
+- Jira Cloud (`basic`) and Server/Data Center (`token`) authentication, with
+  per-tenant custom field mappings and a configurable API version
+
+#### Configurable quality gate
+- `QA_MCP_LINT_MINIMUM_SCORE`, `QA_MCP_LINT_STRICT_MINIMUM_SCORE` and
+  `QA_MCP_LINT_MAX_STEPS`
+- `QA_MCP_LINT_DISABLED_RULES` switches rules off and refunds their score by
+  exactly the penalty published in the lint-rules resource, so a disabled rule
+  does not keep costing points
+
+#### Core
+- `qa_mcp.core.results`: Pydantic result models are now the single definition of
+  what a tool returns. The published `outputSchema` is generated from them,
+  replacing hand-written JSON Schemas that could drift from the code
+- Audit logging moved to an MCP extension interceptor, and reports a failed call
+  as an error — the runtime converts a raising tool into an error result below
+  the interceptor, so catching exceptions alone had logged it as a success
+- Argument *names* are audited; argument values never are
+
+#### CI/CD
+- Every organisation-specific name in the Jenkins pipeline is a build parameter
+  with a default: SonarQube server, scanner tool, project key, interpreter,
+  Docker registry and credentials id. Image publishing is opt-in
+- `make check-config`, and a `sonar` target that requires `SONAR_HOST_URL` and
+  `SONAR_TOKEN` rather than assuming them
+
+### Documentation
+- `docs/ENTERPRISE-SETUP.md`: connecting a tenant, enabling writes, setting a
+  quality bar, credential handling and troubleshooting
+- `.env.example`, kept in step with the settings models by a test
+
+---
+
 ## [1.1.0] - 2026-09-02
 
 ### Fixed

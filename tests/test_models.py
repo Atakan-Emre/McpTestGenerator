@@ -193,13 +193,24 @@ class TestPackagingConstraints:
     def test_mcp_dependency_has_an_upper_bound(self):
         """Regression: an unbounded `mcp>=1.0.0` let mcp 2.x break the server on install.
 
-        mcp 2.x removed the decorator-based low-level API this server is built
-        on, so a fresh install resolved to a version that crashed at import.
+        mcp 2.x removed the decorator-based low-level API 1.x code was built on
+        and renamed FastMCP to MCPServer, so a fresh install resolved to a
+        version that crashed at import. The specific ceiling will move; that
+        there is one must not.
         """
         from importlib.metadata import requires
 
         mcp_requirements = [r for r in (requires("qa-mcp") or []) if r.startswith("mcp")]
         assert mcp_requirements, "qa-mcp no longer declares an mcp dependency"
-        assert any("<2" in r for r in mcp_requirements), (
-            f"mcp dependency must pin below 2.0: {mcp_requirements}"
+        assert any("<" in r for r in mcp_requirements), (
+            f"mcp dependency must declare an upper bound: {mcp_requirements}"
+        )
+
+    def test_mcp_upper_bound_matches_the_installed_major(self):
+        """The pin must admit the version actually being tested against."""
+        from importlib.metadata import version
+
+        installed_major = int(version("mcp").split(".")[0])
+        assert installed_major == 2, (
+            f"tests run against mcp {installed_major}.x; update the pin and this guard together"
         )

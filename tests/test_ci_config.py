@@ -16,8 +16,9 @@ JENKINSFILE = REPO_ROOT / "Jenkinsfile"
 MAKEFILE = REPO_ROOT / "Makefile"
 SONAR_PROPERTIES = REPO_ROOT / "sonar-project.properties"
 PYPROJECT = REPO_ROOT / "pyproject.toml"
+ENV_EXAMPLE = REPO_ROOT / ".env.example"
 
-CI_FILES = (JENKINSFILE, MAKEFILE, SONAR_PROPERTIES)
+CI_FILES = (JENKINSFILE, MAKEFILE, SONAR_PROPERTIES, ENV_EXAMPLE)
 
 # These assert properties of the repository, not of the installed package, so
 # they are meaningless where the source tree is absent - the development Docker
@@ -86,6 +87,28 @@ class TestJenkinsfile:
         """A quality gate that does not fail the build is decorative."""
         text = JENKINSFILE.read_text(encoding="utf-8")
         assert "waitForQualityGate abortPipeline: true" in text
+
+    def test_configurable_names_are_parameters_not_literals(self):
+        """An organisation must be able to run this without editing the file."""
+        text = JENKINSFILE.read_text(encoding="utf-8")
+
+        for parameter in (
+            "SONARQUBE_ENV",
+            "SONAR_SCANNER_TOOL",
+            "SONAR_PROJECT_KEY",
+            "PYTHON",
+            "DOCKER_REGISTRY",
+            "DOCKER_CREDENTIALS_ID",
+        ):
+            assert f"name: '{parameter}'" in text, f"{parameter} is not a build parameter"
+            assert f"params.{parameter}" in text, f"{parameter} is declared but never used"
+
+    def test_image_publishing_is_opt_in(self):
+        """A build must not push to a registry unless asked to."""
+        text = JENKINSFILE.read_text(encoding="utf-8")
+        assert "name: 'PUBLISH_IMAGE'" in text
+        assert "defaultValue: false" in text
+        assert "params.PUBLISH_IMAGE" in text
 
     def test_junit_results_are_published(self):
         text = JENKINSFILE.read_text(encoding="utf-8")
@@ -159,6 +182,7 @@ class TestMakefile:
             "audit",
             "build",
             "sonar",
+            "check-config",
             "ci",
             "clean",
         ],
@@ -242,3 +266,34 @@ class TestVersionConsistency:
         assert released[0] == self._package_version(), (
             f"newest changelog entry is {released[0]}, package is {self._package_version()}"
         )
+
+
+class TestSettingsDocumentation:
+    """`.env.example` is the contract an organisation reads; keep it honest."""
+
+    def test_every_setting_is_documented(self):
+        """A setting nobody can discover may as well not exist."""
+        from qa_mcp.config import LintSettings, Settings, XraySettings
+
+        text = ENV_EXAMPLE.read_text(encoding="utf-8")
+        documented = set(re.findall(r"^#?\s*(QA_MCP_[A-Z_]+)=", text, re.M))
+
+        declared = set()
+        for model, prefix in (
+            (Settings, "QA_MCP_"),
+            (LintSettings, "QA_MCP_LINT_"),
+            (XraySettings, "QA_MCP_XRAY_"),
+        ):
+            for name in model.model_fields:
+                if name in ("lint", "xray"):
+                    continue
+                declared.add(prefix + name.upper())
+
+        assert not declared - documented, f"undocumented settings: {sorted(declared - documented)}"
+        assert not documented - declared, f"documented but unknown: {sorted(documented - declared)}"
+
+    def test_the_example_stays_offline_by_default(self):
+        """Copying the file must not switch on a tenant or write access."""
+        text = ENV_EXAMPLE.read_text(encoding="utf-8")
+        assert "QA_MCP_XRAY_ENABLED=false" in text
+        assert "QA_MCP_ENABLE_WRITE_TOOLS=false" in text

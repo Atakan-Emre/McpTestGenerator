@@ -5,7 +5,7 @@ FROM python:3.11-slim AS base
 
 LABEL org.opencontainers.image.title="QA-MCP"
 LABEL org.opencontainers.image.description="Test Standardization & Orchestration MCP Server"
-LABEL org.opencontainers.image.version="1.1.0"
+LABEL org.opencontainers.image.version="2.0.0"
 LABEL org.opencontainers.image.authors="Atakan Emre"
 LABEL org.opencontainers.image.source="https://github.com/Atakan-Emre/McpTestGenerator"
 LABEL org.opencontainers.image.licenses="MIT"
@@ -21,12 +21,10 @@ RUN pip install --no-cache-dir .
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    LOG_LEVEL=info \
-    ENABLE_WRITE_TOOLS=false \
-    AUDIT_LOG_ENABLED=true \
-    HTTP_ENABLED=false \
-    HTTP_BIND_HOST=127.0.0.1 \
-    HTTP_PORT=8080
+    QA_MCP_LOG_LEVEL=INFO \
+    QA_MCP_AUDIT_LOG_ENABLED=true \
+    QA_MCP_ENABLE_WRITE_TOOLS=false \
+    QA_MCP_XRAY_ENABLED=false
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import qa_mcp; print('OK')" || exit 1

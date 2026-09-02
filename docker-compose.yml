@@ -13,14 +13,14 @@ services:
       context: .
       dockerfile: Dockerfile
       target: production
-    image: atakanemree/qa-mcp:${VERSION:-1.1.0}
+    image: atakanemree/qa-mcp:${VERSION:-2.0.0}
     container_name: qa-mcp
     stdin_open: true
     tty: true
     environment:
-      - LOG_LEVEL=${LOG_LEVEL:-info}
-      - ENABLE_WRITE_TOOLS=${ENABLE_WRITE_TOOLS:-false}
-      - AUDIT_LOG_ENABLED=${AUDIT_LOG_ENABLED:-true}
+      - QA_MCP_LOG_LEVEL=${QA_MCP_LOG_LEVEL:-INFO}
+      - QA_MCP_ENABLE_WRITE_TOOLS=${QA_MCP_ENABLE_WRITE_TOOLS:-false}
+      - QA_MCP_AUDIT_LOG_ENABLED=${QA_MCP_AUDIT_LOG_ENABLED:-true}
     # Security: run as non-root
     user: "1000:1000"
     # Resource limits
@@ -48,18 +48,19 @@ services:
       context: .
       dockerfile: Dockerfile
       target: development
-    image: atakanemree/qa-mcp:${VERSION:-1.1.0}-dev
+    image: atakanemree/qa-mcp:${VERSION:-2.0.0}-dev
     container_name: qa-mcp-dev
     stdin_open: true
     tty: true
     environment:
-      - LOG_LEVEL=debug
-      - ENABLE_WRITE_TOOLS=true
-      - AUDIT_LOG_ENABLED=true
+      - QA_MCP_LOG_LEVEL=DEBUG
+      - QA_MCP_AUDIT_LOG_ENABLED=true
+      # Write tools are deliberately left off: they now require a configured
+      # Jira tenant and are validated at startup, and this service only runs
+      # the test suite.
     volumes:
       # Mount source for hot reload during development
       - ./src/qa_mcp:/app/src/qa_mcp:ro
-      - ./resources:/app/resources:ro
       - ./tests:/app/tests:ro
     working_dir: /app
     entrypoint: ["python"]

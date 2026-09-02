@@ -398,13 +398,43 @@ Tool names use underscores to stay compatible with Claude Desktop's MCP validato
 
 ### Environment Variables
 
+QA-MCP runs with no configuration at all. Everything below is optional; the
+full reference, including connecting a Jira/Xray tenant, is in
+**[docs/ENTERPRISE-SETUP.md](docs/ENTERPRISE-SETUP.md)**.
+
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `LOG_LEVEL` | `info` | Log level: debug, info, warning, error |
-| `AUDIT_LOG_ENABLED` | `true` | Logs tool calls |
-| `ENABLE_WRITE_TOOLS` | `false` | Reserved flag; no extra public write tools are exposed in the current release |
+| `QA_MCP_LOG_LEVEL` | `INFO` | Log level; logs go to stderr |
+| `QA_MCP_AUDIT_LOG_ENABLED` | `true` | Log every tool call (argument names only) |
+| `QA_MCP_LEGACY_TOOL_ALIASES` | `false` | Also publish the pre-1.0.3 dotted tool names |
+| `QA_MCP_LINT_MINIMUM_SCORE` | `60` | Score a test case needs to pass |
+| `QA_MCP_LINT_STRICT_MINIMUM_SCORE` | `75` | Score required in strict mode |
+| `QA_MCP_LINT_MAX_STEPS` | `15` | Steps beyond which a test case is flagged |
+| `QA_MCP_LINT_DISABLED_RULES` | `[]` | Rule ids to skip, as a JSON array |
+| `QA_MCP_XRAY_ENABLED` | `false` | Allow QA-MCP to contact Jira/Xray |
+| `QA_MCP_XRAY_BASE_URL` | — | Jira base URL |
+| `QA_MCP_XRAY_AUTH_MODE` | `token` | `basic` (Cloud: email + token) or `token` (Server/DC bearer) |
+| `QA_MCP_XRAY_API_TOKEN` | — | API token or personal access token |
+| `QA_MCP_XRAY_PROJECT_KEY` | — | Default Jira project key |
+| `QA_MCP_XRAY_CUSTOM_FIELDS` | `{}` | QA-MCP field → Jira custom field id, as JSON |
+| `QA_MCP_ENABLE_WRITE_TOOLS` | `false` | Publish `xray_create_test`, which writes to Jira |
 
-**Runtime note:** QA-MCP currently runs in `stdio` mode only. Container images may still define placeholder HTTP-related environment variables, but they are not active runtime features in the current release.
+```bash
+qa-mcp --check-config
+```
+
+validates the configuration, prints what the deployment would expose, and exits
+non-zero when something is wrong. A tenant that is switched on but incomplete
+fails here rather than on the first tool call.
+
+**Conditional tools.** `xray_verify_connection`, `xray_get_test` and
+`xray_search_tests` appear only once a tenant is configured;
+`xray_create_test` appears only when `QA_MCP_ENABLE_WRITE_TOOLS` is true.
+
+**Runtime note:** QA-MCP runs in `stdio` mode only. The 1.x variable names
+(`LOG_LEVEL`, `AUDIT_LOG_ENABLED`, `ENABLE_WRITE_TOOLS`) are still accepted so
+existing deployments keep working, but the prefixed names above are the
+documented ones.
 
 ---
 
@@ -825,9 +855,26 @@ Tool adları Claude Desktop MCP doğrulayıcısıyla uyum için underscore kulla
 
 | Değişken | Varsayılan | Açıklama |
 |----------|------------|----------|
-| `LOG_LEVEL` | `info` | Log seviyesi: debug, info, warning, error |
-| `AUDIT_LOG_ENABLED` | `true` | Tool çağrılarını loglar |
-| `ENABLE_WRITE_TOOLS` | `false` | Ayrılmış bayrak; mevcut sürümde ek public write tool açmaz |
+| `QA_MCP_LOG_LEVEL` | `INFO` | Log seviyesi; loglar stderr'e gider |
+| `QA_MCP_AUDIT_LOG_ENABLED` | `true` | Her tool çağrısını loglar (yalnızca argüman adları) |
+| `QA_MCP_LEGACY_TOOL_ALIASES` | `false` | 1.0.3 öncesi noktalı tool adlarını da yayınlar |
+| `QA_MCP_LINT_MINIMUM_SCORE` | `60` | Test case'in geçmesi için gereken skor |
+| `QA_MCP_LINT_MAX_STEPS` | `15` | Bu adım sayısını aşan test case işaretlenir |
+| `QA_MCP_LINT_DISABLED_RULES` | `[]` | Uygulanmayacak kural id'leri (JSON dizi) |
+| `QA_MCP_XRAY_ENABLED` | `false` | Jira/Xray bağlantısına izin verir |
+| `QA_MCP_XRAY_BASE_URL` | — | Jira temel adresi |
+| `QA_MCP_XRAY_AUTH_MODE` | `token` | `basic` (Cloud: e-posta + token) veya `token` (Server/DC bearer) |
+| `QA_MCP_XRAY_API_TOKEN` | — | API token veya personal access token |
+| `QA_MCP_XRAY_PROJECT_KEY` | — | Varsayılan Jira proje anahtarı |
+| `QA_MCP_XRAY_CUSTOM_FIELDS` | `{}` | QA-MCP alanı → Jira custom field id (JSON) |
+| `QA_MCP_ENABLE_WRITE_TOOLS` | `false` | Jira'ya yazan `xray_create_test` tool'unu yayınlar |
+
+Tam referans ve tenant bağlama adımları için:
+**[docs/ENTERPRISE-SETUP.md](docs/ENTERPRISE-SETUP.md)**.
+
+`qa-mcp --check-config` yapılandırmayı doğrular, neyin yayınlanacağını yazdırır
+ve hatalıysa sıfırdan farklı kodla çıkar. 1.x'teki öneksiz adlar
+(`LOG_LEVEL` vb.) hâlâ kabul edilir.
 
 **Runtime notu:** QA-MCP şu anda yalnızca `stdio` modunda çalışır. Container image içinde HTTP ile ilgili placeholder environment variable'lar bulunabilir, ancak bunlar mevcut sürümde aktif runtime özelliği değildir.
 
