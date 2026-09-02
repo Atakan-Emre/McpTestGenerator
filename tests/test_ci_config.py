@@ -17,6 +17,18 @@ MAKEFILE = REPO_ROOT / "Makefile"
 SONAR_PROPERTIES = REPO_ROOT / "sonar-project.properties"
 PYPROJECT = REPO_ROOT / "pyproject.toml"
 
+CI_FILES = (JENKINSFILE, MAKEFILE, SONAR_PROPERTIES)
+
+# These assert properties of the repository, not of the installed package, so
+# they are meaningless where the source tree is absent - the development Docker
+# image, for instance, copies only `src/` and `tests/`. Skip only when none of
+# the files are there: a checkout missing just one of them is a real defect and
+# must still fail.
+pytestmark = pytest.mark.skipif(
+    not any(path.exists() for path in CI_FILES),
+    reason="not a source checkout - CI configuration files are not present",
+)
+
 
 def _makefile_targets() -> set[str]:
     """Target names declared in the Makefile."""
