@@ -129,6 +129,8 @@ smell is a literal baked into the steps. `BAD-003` now scores 57/F.
 ### Documentation
 - `docs/CI-CD.md`: Jenkins and SonarQube setup, required plugins, and the
   report contract between the Makefile, the pipeline and Sonar
+- `docs/MCP-2.x-MIGRATION.md`: migration plan for the mcp 2.x SDK, with every
+  API difference verified against mcp 2.1.1 rather than taken from release notes
 - Documented the `integration` and `performance` suite targets and the new
   `schema_valid` lint response fields in USAGE.md
 - Added PyPI publishing workflow and documentation

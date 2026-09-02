@@ -161,6 +161,7 @@ For deep dives into QA-MCP's architecture and contribution guidelines, explore t
   - **[CONTRIBUTING.md](CONTRIBUTING.md):** Contributor workflow and quality checks.
   - **[CHANGELOG.md](CHANGELOG.md):** Release history.
   - **[docs/CI-CD.md](docs/CI-CD.md):** Jenkins pipeline and SonarQube analysis setup.
+  - **[docs/MCP-2.x-MIGRATION.md](docs/MCP-2.x-MIGRATION.md):** Verified plan for moving to the mcp 2.x SDK.
   - **[docs/PUBLISHING.md](docs/PUBLISHING.md):** Package and release publishing flow.
 
 ## 🗺️ Roadmap
@@ -321,6 +322,7 @@ Mimari detaylar ve projeye katkı rehberleri için:
   - **[CONTRIBUTING.md](CONTRIBUTING.md):** Katkı akışı ve kalite kontrolleri.
   - **[CHANGELOG.md](CHANGELOG.md):** Sürüm ve değişiklik geçmişi.
   - **[docs/CI-CD.md](docs/CI-CD.md):** Jenkins pipeline ve SonarQube analiz kurulumu.
+  - **[docs/MCP-2.x-MIGRATION.md](docs/MCP-2.x-MIGRATION.md):** mcp 2.x SDK'ya geçiş için doğrulanmış plan.
   - **[docs/PUBLISHING.md](docs/PUBLISHING.md):** Paket ve release yayın süreci.
 
 ## 🗺️ Yol Haritası
