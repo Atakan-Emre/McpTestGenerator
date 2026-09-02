@@ -297,3 +297,100 @@ class TestSettingsDocumentation:
         text = ENV_EXAMPLE.read_text(encoding="utf-8")
         assert "QA_MCP_XRAY_ENABLED=false" in text
         assert "QA_MCP_ENABLE_WRITE_TOOLS=false" in text
+
+
+class TestReadmeAccuracy:
+    """The README is the first thing anyone reads; keep it true.
+
+    Every claim asserted here has been wrong at some point: a tool list that
+    lagged the code, an environment table naming variables that no longer
+    existed, and a roadmap promising an integration that had already shipped.
+    """
+
+    README = REPO_ROOT / "README.md"
+
+    @staticmethod
+    def _text() -> str:
+        return TestReadmeAccuracy.README.read_text(encoding="utf-8")
+
+    def test_it_announces_the_major_version(self):
+        assert self._text().startswith("# QA-MCP v2")
+
+    async def test_every_tool_is_documented(self):
+        """Including the ones only a configured deployment exposes."""
+        import os
+
+        from qa_mcp.config import Settings
+        from qa_mcp.server import mcp, register_optional_tools
+
+        tenant = {
+            "QA_MCP_XRAY_ENABLED": "true",
+            "QA_MCP_XRAY_BASE_URL": "https://example.invalid",
+            "QA_MCP_XRAY_API_TOKEN": "t",
+            "QA_MCP_ENABLE_WRITE_TOOLS": "true",
+        }
+        before = {tool.name for tool in mcp._tool_manager.list_tools()}
+        os.environ.update(tenant)
+        try:
+            register_optional_tools(Settings())
+            names = {tool.name for tool in await mcp.list_tools()}
+        finally:
+            # The server is a module-level singleton; leave it as it was found.
+            for name in {t.name for t in mcp._tool_manager.list_tools()} - before:
+                mcp.remove_tool(name)
+            for key in tenant:
+                os.environ.pop(key, None)
+
+        documented = set(
+            re.findall(r"\| `(testcase_[a-z_]+|suite_[a-z_]+|xray_[a-z_]+)`", self._text())
+        )
+        assert not names - documented, f"undocumented tools: {sorted(names - documented)}"
+        assert not documented - names, f"documented but absent: {sorted(documented - names)}"
+
+    def test_conditional_tools_are_not_listed_as_always_available(self):
+        """Promising a Jira tool to someone with no tenant is a support ticket."""
+        text = self._text()
+        always_on_section = text.split("### Tools — published once")[0]
+
+        for conditional in (
+            "xray_verify_connection",
+            "xray_get_test",
+            "xray_search_tests",
+            "xray_create_test",
+        ):
+            assert f"| `{conditional}`" not in always_on_section, (
+                f"{conditional} is listed as always available"
+            )
+
+    def test_environment_variables_named_in_the_readme_exist(self):
+        from qa_mcp.config import LintSettings, Settings, XraySettings
+
+        declared = set()
+        for model, prefix in (
+            (Settings, "QA_MCP_"),
+            (LintSettings, "QA_MCP_LINT_"),
+            (XraySettings, "QA_MCP_XRAY_"),
+        ):
+            for name in model.model_fields:
+                if name not in ("lint", "xray"):
+                    declared.add(prefix + name.upper())
+
+        text = self._text()
+        mentioned = set(re.findall(r"`(QA_MCP_[A-Z_]+)`", text)) | set(
+            re.findall(r'"(QA_MCP_[A-Z_]+)"', text)
+        )
+        assert mentioned, "the README documents no configuration at all"
+        assert not mentioned - declared, (
+            f"README names unknown settings: {sorted(mentioned - declared)}"
+        )
+
+    def test_it_explains_how_to_upgrade_from_1x(self):
+        text = self._text()
+        assert "Migrating from 1.x" in text
+        assert "QA_MCP_LEGACY_TOOL_ALIASES" in text
+
+    def test_the_roadmap_does_not_promise_shipped_work(self):
+        """Phase 3 listed the Jira integration as planned after it had shipped."""
+        text = self._text()
+        assert "Done in v2" in text
+        assert "Phase 3 (Planned)" not in text
